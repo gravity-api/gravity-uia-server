@@ -2,11 +2,13 @@
 {
     internal static class UiaCapability
     {
-        public const string APPLICATION = "app";
-        public const string ARGUMENTS = "arguments";
-        public const string PLATFORM_VERSION = "platformVersion";
-        public const string PLATFORM_NAME = "platformName";
-        public const string TREE_SCOPE = "treeScope";
-        public const string DEV_MODE = "devMode";
+        public const string Application = "app";
+        public const string Arguments = "arguments";
+        public const string PlatformVersion = "platformVersion";
+        public const string PlatformName = "platformName";
+        public const string TreeScope = "treeScope";
+        public const string DevMode = "devMode";
+        public const string UseNativeEvents = "useNativeEvents";
+        public const string DriverPath = "driverPath";
     }
 }

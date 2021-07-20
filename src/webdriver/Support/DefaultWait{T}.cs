@@ -195,7 +195,7 @@ namespace OpenQA.Selenium.Support.UI
                         timeoutMessage += ": " + this.message;
                     }
 
-                    this.ThrowTimeoutException(timeoutMessage, lastException);
+                    ThrowTimeoutException(timeoutMessage, lastException);
                 }
 
                 Thread.Sleep(this.sleepInterval);

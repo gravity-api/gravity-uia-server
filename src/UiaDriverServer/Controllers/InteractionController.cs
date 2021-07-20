@@ -15,11 +15,13 @@
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.valuepattern.valuepatterninformation?view=netframework-4.7.2
  */
 using Newtonsoft.Json.Linq;
+
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Web.Http;
 using System.Windows.Forms;
+
 using UiaDriverServer.Dto;
 using UiaDriverServer.Extensions;
 using UIAutomationClient;
@@ -29,13 +31,11 @@ namespace UiaDriverServer.Controllers
     public class InteractionController : Api
     {
         // native calls
-        #pragma warning disable IDE1006
         [DllImport("user32.dll")]
         private static extern bool SetCursorPos(int x, int y);
 
         [DllImport("user32.dll")]
         private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
-        #pragma warning restore IDE1006
 
         // constants
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
@@ -52,6 +52,7 @@ namespace UiaDriverServer.Controllers
             var session = GetSession(s);
             var element = GetElement(session, e).UIAutomationElement;
             var text = $"{((JToken)dto)["text"]}";
+            var isNative = IsNativeEvents(session);
 
             // evaluate action compliance
             Evaluate(element, text);
@@ -63,11 +64,11 @@ namespace UiaDriverServer.Controllers
             var isValue = pattern != null;
 
             // set value
-            if (!isValue)
+            if (!isValue || isNative)
             {
                 Simulate(element, text);
             }
-            if (isValue)
+            if (isValue && !isNative)
             {
                 try
                 {
@@ -94,10 +95,19 @@ namespace UiaDriverServer.Controllers
             var session = GetSession(s);
             var element = GetElement(session, e);
 
+            // native
+            if (IsNativeEvents(session))
+            {
+                NativeClick(element);
+                DevMode(session);
+                return Ok();
+            }
+
             // flat click pipeline
             var isClick = element.ClickablePoint != null;
             var isNotUiElement = element.UIAutomationElement == null;
             var isNotXnode = element.Node == null;
+
             if (isClick && isNotUiElement && isNotXnode)
             {
                 Simulate(element.ClickablePoint.XPos, element.ClickablePoint.YPos);
@@ -112,6 +122,15 @@ namespace UiaDriverServer.Controllers
             var isExpandCollapse = !isInvoke && element.UIAutomationElement.GetCurrentPattern(UIA_PatternIds.UIA_ExpandCollapsePatternId) != null;
             var isSelectable = !isInvoke && !isExpandCollapse && element.UIAutomationElement.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId) != null;
             var isFocus = element.UIAutomationElement.CurrentIsKeyboardFocusable == 1;
+            var isNative = IsNativeEvents(session);
+
+            // native
+            if (isNative && isFocus)
+            {
+                NativeClick(element);
+                DevMode(session);
+                return Ok();
+            }
 
             // action factory
             if (isInvoke)
@@ -132,9 +151,7 @@ namespace UiaDriverServer.Controllers
             }
             if (!isInvoke && !isExpandCollapse && !isSelectable && isFocus)
             {
-                element.UIAutomationElement.SetFocus();
-                element.UIAutomationElement.GetClickablePoint(out tagPOINT point);
-                Simulate(point.x, point.y);
+                NativeClick(element);
             }
             DevMode(session);
             return Ok();
@@ -182,13 +199,6 @@ namespace UiaDriverServer.Controllers
             SendKeys.SendWait(text);
         }
 
-        private void Simulate(int xpos, int ypos)
-        {
-            SetCursorPos(xpos, ypos);
-            mouse_event(MOUSEEVENTF_LEFTDOWN, xpos, ypos, 0, 0);
-            mouse_event(MOUSEEVENTF_LEFTUP, xpos, ypos, 0, 0);
-        }
-
         private void ExpandCollapse(IUIAutomationElement element)
         {
             // get current pattern
@@ -226,6 +236,38 @@ namespace UiaDriverServer.Controllers
                 return;
             }
             session.RefreshDom();
+        }
+
+        private bool IsNativeEvents(Session session)
+        {
+            // members
+            var key = UiaCapability.UseNativeEvents;
+            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
+
+            // setup
+            var capabilites = session.Capabilities;
+            var isNative = capabilites.ContainsKey(key);
+
+            // get
+            return isNative && $"{capabilites[key]}".Equals("true", Compare);
+        }
+
+        // initiate native click
+        private void NativeClick(Element element)
+        {
+            // build
+            var point = element.GetClickablePoint();
+
+            // get
+            Simulate(point.XPos, point.YPos);
+        }
+
+        private void Simulate(int xpos, int ypos)
+        {
+            SetCursorPos(xpos, xpos);
+            mouse_event(MOUSEEVENTF_LEFTDOWN, xpos, xpos, 0, 0);
+            mouse_event(MOUSEEVENTF_LEFTUP, xpos, xpos, 0, 0);
+            mouse_event(MOUSEEVENTF_LEFTDOWN, xpos, xpos, 0, 0);
         }
     }
 }

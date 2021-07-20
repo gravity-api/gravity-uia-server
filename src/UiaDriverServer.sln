@@ -1,15 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.271
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31402.337
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaClient", "UiaClient\UiaClient.csproj", "{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebDriver", "webdriver\WebDriver.csproj", "{7B04950C-23FD-4BFB-89BE-2CE046CEA8A5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriver", "UiaWebDriver\UiaWebDriver.csproj", "{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaDriverServer", "UiaDriverServer\UiaDriverServer.csproj", "{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebDriver", "webdriver\WebDriver.csproj", "{5B3C0F5E-B962-4766-A39D-06820153759E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,10 +21,6 @@ Global
 		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7B04950C-23FD-4BFB-89BE-2CE046CEA8A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7B04950C-23FD-4BFB-89BE-2CE046CEA8A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7B04950C-23FD-4BFB-89BE-2CE046CEA8A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7B04950C-23FD-4BFB-89BE-2CE046CEA8A5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,6 +29,10 @@ Global
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B3C0F5E-B962-4766-A39D-06820153759E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B3C0F5E-B962-4766-A39D-06820153759E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B3C0F5E-B962-4766-A39D-06820153759E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B3C0F5E-B962-4766-A39D-06820153759E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -9,5 +9,6 @@ namespace UiaDriverServer.Dto
         public IUIAutomationElement UIAutomationElement { get; set; }
         public XNode Node { get; set; }
         public ClickablePoint ClickablePoint { get; set; }
+        public Location Location { get; set; }
     }
 }

@@ -13,19 +13,23 @@
  * https://www.w3.org/TR/webdriver1/#delete-session
  */
 using Newtonsoft.Json.Linq;
+
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+
 using UiaDriverServer.Components;
 using UiaDriverServer.Domain;
 using UiaDriverServer.Dto;
 using UiaDriverServer.Extensions;
+
 using UIAutomationClient;
 
 namespace UiaDriverServer.Controllers
@@ -37,12 +41,16 @@ namespace UiaDriverServer.Controllers
     /// </summary>
     public class SessionController : Api
     {
+        // native iterop       
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
         // GET wd/hub/status
         // GET status        
         [Route("wd/hub/session")]
         [Route("session")]
         [HttpGet]
-        public HttpResponseMessage Dom([FromUri]string id)
+        public HttpResponseMessage Dom([FromUri] string id)
         {
             // setup conditions
             var haveSession = sessions.ContainsKey(id);
@@ -104,8 +112,9 @@ namespace UiaDriverServer.Controllers
             // evaluate capabilities
             var capabilities = ((JToken)dto).ToObject<Capabilities>();
 
+            // TODO: reactivate user validation
             // feature compliance
-            LoadFeatures(capabilities, "webdriver-uia");
+            // LoadFeatures(capabilities, "webdriver-uia");
 
             // evaluate
             var eval = Evaluate(capabilities, out bool passed);
@@ -116,10 +125,10 @@ namespace UiaDriverServer.Controllers
 
             // get session initialization information
             var args = string.Empty;
-            var executeable = $"{capabilities.DesiredCapabilities[UiaCapability.APPLICATION]}";
-            if (capabilities.DesiredCapabilities.ContainsKey(UiaCapability.ARGUMENTS))
+            var executeable = $"{capabilities.DesiredCapabilities[UiaCapability.Application]}";
+            if (capabilities.DesiredCapabilities.ContainsKey(UiaCapability.Arguments))
             {
-                args = $"{capabilities.DesiredCapabilities[UiaCapability.ARGUMENTS]}";
+                args = $"{capabilities.DesiredCapabilities[UiaCapability.Arguments]}";
             }
             var process = Get(executeable, args).WaitForHandle(TimeSpan.FromSeconds(60));
 
@@ -174,6 +183,27 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
+        // POST wd/hub/session/[id]
+        // POST session        
+        [Route("wd/hub/session/{id}/window/maximize")]
+        [Route("session/{id}/window/maximize")]
+        [HttpPost]
+        public IHttpActionResult Maximize(string id)
+        {
+            // get session
+            var session = GetSession(id);
+
+            // delete
+            ShowWindow(session.Application.MainWindowHandle, 3);
+
+            // put to screen
+            var message = $"Invoke-Maximize -Handle {session.Application.MainWindowHandle} = OK";
+            Trace.TraceInformation(message);
+
+            // get
+            return Ok();
+        }
+
         private IHttpActionResult Evaluate(Capabilities capabilities, out bool passed)
         {
             // shortcuts
@@ -181,17 +211,17 @@ namespace UiaDriverServer.Controllers
             passed = false;
 
             // evaluate
-            if (!c.ContainsKey(UiaCapability.APPLICATION))
+            if (!c.ContainsKey(UiaCapability.Application))
             {
-                var exception = Get(UiaCapability.APPLICATION);
+                var exception = Get(UiaCapability.Application);
                 return InternalServerError(exception);
             }
-            if (!c.ContainsKey(UiaCapability.PLATFORM_NAME))
+            if (!c.ContainsKey(UiaCapability.PlatformName))
             {
-                var exception = Get(UiaCapability.PLATFORM_NAME);
+                var exception = Get(UiaCapability.PlatformName);
                 return InternalServerError(exception);
             }
-            if (!$"{c[UiaCapability.PLATFORM_NAME]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
+            if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
             {
                 var exception =
                     new ArgumentException("platform name must be [windows]", nameof(capabilities));
@@ -216,7 +246,7 @@ namespace UiaDriverServer.Controllers
                 StartInfo = new ProcessStartInfo { FileName = app, Arguments = args }
             };
             process.Start();
-            //process.WaitForInputIdle();
+            process.WaitForInputIdle();
             return process;
         }
 

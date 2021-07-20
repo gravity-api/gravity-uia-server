@@ -20,7 +20,7 @@ using System;
 #if NETCOREAPP2_0 || NETSTANDARD2_0
 #else
 using System.Drawing;
-using System.Drawing.Imaging;
+//using System.Drawing.Imaging;
 #endif
 using System.IO;
 
@@ -124,10 +124,10 @@ namespace OpenQA.Selenium
 #if NETCOREAPP2_0 || NETSTANDARD2_0
                     imageStream.WriteTo(fileStream);
 #else
-                    using (Image screenshotImage = Image.FromStream(imageStream))
-                    {
-                        screenshotImage.Save(fileStream, ConvertScreenshotImageFormat(format));
-                    }
+                    //using (Image screenshotImage = Image.FromStream(imageStream))
+                    //{
+                    //    screenshotImage.Save(fileStream, ConvertScreenshotImageFormat(format));
+                    //}
 #endif
                 }
             }
@@ -144,30 +144,30 @@ namespace OpenQA.Selenium
 
 #if NETCOREAPP2_0 || NETSTANDARD2_0
 #else
-        private static ImageFormat ConvertScreenshotImageFormat(ScreenshotImageFormat format)
-        {
-            ImageFormat returnedFormat = ImageFormat.Png;
-            switch (format)
-            {
-                case ScreenshotImageFormat.Jpeg:
-                    returnedFormat = ImageFormat.Jpeg;
-                    break;
+        //private static ImageFormat ConvertScreenshotImageFormat(ScreenshotImageFormat format)
+        //{
+        //    ImageFormat returnedFormat = ImageFormat.Png;
+        //    switch (format)
+        //    {
+        //        case ScreenshotImageFormat.Jpeg:
+        //            returnedFormat = ImageFormat.Jpeg;
+        //            break;
 
-                case ScreenshotImageFormat.Gif:
-                    returnedFormat = ImageFormat.Gif;
-                    break;
+        //        case ScreenshotImageFormat.Gif:
+        //            returnedFormat = ImageFormat.Gif;
+        //            break;
 
-                case ScreenshotImageFormat.Bmp:
-                    returnedFormat = ImageFormat.Bmp;
-                    break;
+        //        case ScreenshotImageFormat.Bmp:
+        //            returnedFormat = ImageFormat.Bmp;
+        //            break;
 
-                case ScreenshotImageFormat.Tiff:
-                    returnedFormat = ImageFormat.Tiff;
-                    break;
-            }
+        //        case ScreenshotImageFormat.Tiff:
+        //            returnedFormat = ImageFormat.Tiff;
+        //            break;
+        //    }
 
-            return returnedFormat;
-        }
+        //    return returnedFormat;
+        //}
 #endif
     }
 }

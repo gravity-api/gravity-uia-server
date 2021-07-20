@@ -1,10 +1,7 @@
 ﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using OpenQA.Selenium.Uia;
 using System;
-using System.Threading;
-using UIAutomationClient;
 
 namespace UiaClient
 {
@@ -12,6 +9,12 @@ namespace UiaClient
     {
         private static void Main()
         {
+            //var chrome = new OpenQA.Selenium.Chrome.ChromeDriver(@"C:\AutomationEnv\WebDrivers");
+            //chrome.Navigate().GoToUrl("https://www.google.com");
+            //chrome.FindElement(By.XPath("//input[@name='q']")).Click();
+            //chrome.FindElement(By.XPath("//input[@name='q']")).SendKeys("Foo Bar");
+            //chrome.Dispose();
+
             // cache sample
             /*
             var a = new CUIAutomation8();
@@ -40,15 +43,13 @@ namespace UiaClient
             var dd = doc.CachedAutomationId;
             var ee = doc.CurrentClassName;
             */
-            var options = new UiaOptions
-            {
-                Application = "java.exe",
-                Arguments = @"-jar D:\automation-env\demo\swing\skeleton-3.5.4.jar"
-                //DriverPath = @"C:\Users\s_roe\Desktop\net47"
-            };
-            options.AddAdditionalCapability("gUser", "test@gravity.api");
-            options.AddAdditionalCapability("gPassword", "Aa123456!");
-           // var driver = new UiaDriver(options);
+            var options = new UiaOptions();
+            //{
+            //    Application = @"C:\Program Files (x86)\MyHeritage\Bin\MyHeritage.exe",
+            //    DriverPath = @"C:\Users\roei.sabag\Desktop\stage\gravity-uia-server\UiaDriverServer\UiaDriverServer\bin\Debug\net47"
+            //};
+            //options.AddAdditionalCapability("gUser", "test@gravity.api");
+            //options.AddAdditionalCapability("gPassword", "Aa123456!");
 
 
             /*
@@ -102,8 +103,8 @@ namespace UiaClient
 
             // initialize new driver based on options (new selenium standard)
             // opens "notepad.exe"
-            //options.Application = "notepad.exe";
-            var driver = new UiaDriver(new Uri("http://10.61.61.105:4444/wd/hub"), options);
+            options.Application = "notepad.exe";
+            var driver = new UiaDriver(new Uri("http://192.168.30.179:4444/wd/hub"), options);
 
             // waiter instance to avoid element-not-found exception
             var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));

@@ -15,15 +15,6 @@ namespace OpenQA.Selenium.Uia
 {
     public class UiaOptions : DriverOptions
     {
-        // constants
-        private const string APPLICATION = "app";
-        private const string ARGUMENTS = "arguments";
-        private const string PLATFORM_VERSION = "platformVersion";
-        private const string TREE_SCOPE = "treeScope";
-        private const string DEV_MODE = "devMode";
-        private const string PLATFORM_NAME_VALUE = "windows";
-        private const string DRIVER_PATH = "driverPath";
-
         // the dictionary of capabilities
         private readonly UiaCapabilities capabilities = new UiaCapabilities();
 
@@ -32,7 +23,7 @@ namespace OpenQA.Selenium.Uia
         /// </summary>
         public UiaOptions()
         {
-            PlatformName = PLATFORM_NAME_VALUE;
+            PlatformName = "windows";
         }
 
         /// <summary>
@@ -67,6 +58,11 @@ namespace OpenQA.Selenium.Uia
         /// the full path to the directory containing UiaWebDriver.exe
         /// </summary>
         public string DriverPath { get; set; } = Environment.CurrentDirectory;
+
+        /// <summary>
+        /// Prefer native events over patterns when possible.
+        /// </summary>
+        public bool UseNativeEvents { get; set; } = false;
 
         /// <summary>
         /// provides a means to add additional capabilities not yet added as type safe options
@@ -105,12 +101,13 @@ namespace OpenQA.Selenium.Uia
             dictionary.AddOrReplace(CapabilityType.Proxy, Proxy);
             dictionary.AddOrReplace(CapabilityType.UnhandledPromptBehavior, UnhandledPromptBehavior);
             dictionary.AddOrReplace(CapabilityType.PageLoadStrategy, PageLoadStrategy);
-            dictionary.AddOrReplace(PLATFORM_VERSION, PlatfromVersion);
-            dictionary.AddOrReplace(APPLICATION, Application);
-            dictionary.AddOrReplace(ARGUMENTS, args);
-            dictionary.AddOrReplace(TREE_SCOPE, scope);
-            dictionary.AddOrReplace(DEV_MODE, DevelopmentMode);
-            dictionary.AddOrReplace(DRIVER_PATH, DriverPath);
+            dictionary.AddOrReplace(UiaCapability.PlatformVersion, PlatfromVersion);
+            dictionary.AddOrReplace(UiaCapability.Application, Application);
+            dictionary.AddOrReplace(UiaCapability.Arguments, args);
+            dictionary.AddOrReplace(UiaCapability.TreeScope, scope);
+            dictionary.AddOrReplace(UiaCapability.DevMode, DevelopmentMode);
+            dictionary.AddOrReplace(UiaCapability.DriverPath, DriverPath);
+            dictionary.AddOrReplace(UiaCapability.UseNativeEvents, UseNativeEvents);
             return capabilities;
         }
 
