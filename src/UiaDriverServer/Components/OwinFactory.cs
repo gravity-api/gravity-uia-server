@@ -61,6 +61,9 @@ namespace UiaDriverServer.Components
 
             try
             {
+                // logo
+                RednerLogo();
+
                 // open wcf-service
                 WebApp.Start<DriverServiceStartup>(options);
                 Trace.TraceInformation($"[{serviceFullName}] opened");
@@ -74,6 +77,21 @@ namespace UiaDriverServer.Components
                 Trace.TraceError($"failed to open [{serviceFullName}] web-api due to --- {ex} ---");
                 throw;
             }
+        }
+
+        private void RednerLogo()
+        {
+            Console.WriteLine("  ▄▄▄▄▄▄▄     ▄▄▄▄▄▄   ▄▄▄▄▄         ▄▄▄▄▄         ");
+            Console.WriteLine(" ████████     ██████  █████▀        ███████▄       ");
+            Console.WriteLine("  ██████       ████     ▄▄▄▄        ████████▄      ");
+            Console.WriteLine("  ██████       ████  ▄██████       ▄███▀██████     ");
+            Console.WriteLine("  ██████       ████   ██████      ▄███▀ ▀██████    ");
+            Console.WriteLine("  ██████       ████   ██████     ▄██████████████   ");
+            Console.WriteLine("  ███████▄   ▄▄████   ██████    ▄███▀▀▀▀▀▀▀██████  ");
+            Console.WriteLine("   ▀█████████████▀   ████████ ████████   ██████████");
+            Console.WriteLine("      ▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀ ");
+            Console.WriteLine(" WebDriver implementation for Windows native.      ");
+            Console.WriteLine("");
         }
     }
 }
