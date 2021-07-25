@@ -23,6 +23,7 @@
  */
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,10 +31,12 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Web.Http;
 using System.Xml.XPath;
+
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Dto;
 using UiaDriverServer.Extensions;
+
 using UIAutomationClient;
 
 namespace UiaDriverServer.Controllers
@@ -119,7 +122,8 @@ namespace UiaDriverServer.Controllers
                 UIA_PatternIds.UIA_TextChildPatternId,
                 UIA_PatternIds.UIA_TextEditPatternId,
                 UIA_PatternIds.UIA_TextPattern2Id,
-                UIA_PatternIds.UIA_TextPatternId
+                UIA_PatternIds.UIA_TextPatternId,
+                UIA_PatternIds.UIA_ValuePatternId
             };
 
             // load methods
@@ -132,7 +136,15 @@ namespace UiaDriverServer.Controllers
             var patterns = element.GetPatterns().Where(p => textPatterns.Contains(p));
             var afterCa = methods.Where(m => m.GetCustomAttribute<UiaConstantAttribute>() != null);
             var method = afterCa.FirstOrDefault(m => patterns.Contains(m.GetCustomAttribute<UiaConstantAttribute>().Constant));
-            var constant = method.GetCustomAttribute<UiaConstantAttribute>().Constant;
+            var attribute = method?.GetCustomAttribute<UiaConstantAttribute>();
+
+            // not found
+            if (attribute == null)
+            {
+                return Json(new { Value = string.Empty }, jsonSettings);
+            }
+
+            var constant = attribute.Constant;
             var pattern = element.GetCurrentPattern(constant);
 
             // execute method

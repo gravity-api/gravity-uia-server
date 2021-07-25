@@ -32,5 +32,12 @@ namespace UiaDriverServer.Domain
             var p = (IUIAutomationTextPattern)pattern;
             return p.DocumentRange.GetText(-1);
         }
+
+        [UiaConstant(UIA_PatternIds.UIA_ValuePatternId)]
+        public string G10002(object pattern)
+        {
+            var p = (IUIAutomationValuePattern)pattern;
+            return p.CurrentValue;
+        }
     }
 }

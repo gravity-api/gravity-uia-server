@@ -7,12 +7,13 @@
  *    - modify: add GetSssionsMap method
  */
 using Newtonsoft.Json;
+
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Web.Http;
+
 using UiaDriverServer.Components;
 using UiaDriverServer.Dto;
-using UIAutomationClient;
 
 namespace UiaDriverServer.Controllers
 {

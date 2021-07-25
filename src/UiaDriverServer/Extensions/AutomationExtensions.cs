@@ -28,7 +28,6 @@ namespace UiaDriverServer.Extensions
 
         public static ClickablePoint GetClickablePoint(this Element element)
         {
-            element.UIAutomationElement.SetFocus();
             element.UIAutomationElement.GetClickablePoint(out tagPOINT point);
 
             // setup

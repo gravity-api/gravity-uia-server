@@ -162,25 +162,25 @@ namespace UiaDriverServer.Controllers
             // validate arguments & initial setup
             if (text == null)
             {
-                const string message = "string parameter must not be null";
+                const string message = "String parameter must not be null";
                 throw new ArgumentNullException(nameof(text), message);
             }
             if (element == null)
             {
-                const string message = "automation-element parameter must not be null";
+                const string message = "AutomationElement parameter must not be null";
                 throw new ArgumentNullException(nameof(element), message);
             }
 
             // check #1: is control enabled?
             if (element.CurrentIsEnabled == 0)
             {
-                throw new InvalidOperationException("the control is not enabled");
+                throw new InvalidOperationException("The controller is not enabled");
             }
 
             // check #2: are there styles that prohibit us from sending text to this control?
             if (element.CurrentIsKeyboardFocusable == 0)
             {
-                throw new InvalidOperationException("the control is not focusable");
+                throw new InvalidOperationException("The controller is not focusable");
             }
         }
 
@@ -188,15 +188,9 @@ namespace UiaDriverServer.Controllers
         {
             if (element == null)
             {
-                const string message = "automation-element parameter must not be null";
+                const string message = "AutomationElement parameter must not be null";
                 throw new ArgumentNullException(nameof(element), message);
             }
-        }
-
-        private void Simulate(IUIAutomationElement element, string text)
-        {
-            element.SetFocus();
-            SendKeys.SendWait(text);
         }
 
         private void ExpandCollapse(IUIAutomationElement element)
@@ -252,7 +246,7 @@ namespace UiaDriverServer.Controllers
             return isNative && $"{capabilites[key]}".Equals("true", Compare);
         }
 
-        // initiate native click
+        // initiate native
         private void NativeClick(Element element)
         {
             // build
@@ -264,10 +258,18 @@ namespace UiaDriverServer.Controllers
 
         private void Simulate(int xpos, int ypos)
         {
+            xpos++;
+            ypos--;
+            
             SetCursorPos(xpos, xpos);
-            mouse_event(MOUSEEVENTF_LEFTDOWN, xpos, xpos, 0, 0);
-            mouse_event(MOUSEEVENTF_LEFTUP, xpos, xpos, 0, 0);
-            mouse_event(MOUSEEVENTF_LEFTDOWN, xpos, xpos, 0, 0);
+            mouse_event(MOUSEEVENTF_LEFTDOWN, xpos, ypos, 0, 0);
+            mouse_event(MOUSEEVENTF_LEFTUP, xpos, ypos, 0, 0);
+        }
+
+        private void Simulate(IUIAutomationElement element, string text)
+        {
+            element.SetFocus();
+            SendKeys.SendWait(text);
         }
     }
 }

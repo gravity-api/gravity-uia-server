@@ -66,15 +66,14 @@ namespace UiaDriverServer.Components
 
                 // open wcf-service
                 WebApp.Start<DriverServiceStartup>(options);
-                Trace.TraceInformation($"[{serviceFullName}] opened");
 
                 // output information
-                Trace.TraceInformation($"web-api listening on - http://{Address}:{Port}/wd/hub");
+                Trace.TraceInformation($"Web API listening on    - http://{Address}:{Port}/wd/hub");
                 Trace.TraceInformation($"virtual DOM information - http://{Address}:{Port}/wd/hub/session/?id={{session-id}}");
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"failed to open [{serviceFullName}] web-api due to --- {ex} ---");
+                Trace.TraceError($"Failed to open [{serviceFullName}] Web API due to --- {ex} ---");
                 throw;
             }
         }
@@ -91,7 +90,11 @@ namespace UiaDriverServer.Components
             Console.WriteLine("   ▀█████████████▀   ████████ ████████   ██████████");
             Console.WriteLine("      ▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀ ");
             Console.WriteLine(" WebDriver implementation for Windows native.      ");
-            Console.WriteLine("");
+            Console.WriteLine();
+            Console.WriteLine(" Powered by IUIAutomation: https://docs.microsoft.com/en-us/windows/win32/api/_winauto/");
+            Console.WriteLine(" GitHub Project URL:       https://github.com/gravity-api/gravity-uia-server");
+            Console.WriteLine();
+            Console.WriteLine();
         }
     }
 }

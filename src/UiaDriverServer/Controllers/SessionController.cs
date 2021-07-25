@@ -59,7 +59,7 @@ namespace UiaDriverServer.Controllers
                 return new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.NotFound,
-                    ReasonPhrase = $"session [{id}] was not found"
+                    ReasonPhrase = $"Get-Session -Session [{id}] = NotFound"
                 };
             }
 
@@ -84,8 +84,8 @@ namespace UiaDriverServer.Controllers
 
             // setup message
             var message = isFull
-                ? "current sessions stack is full, the maximum allowed sessions number is 1"
-                : "no sessions in stack, can create new session";
+                ? "Current sessions stack is full, the maximum allowed sessions number is 1"
+                : "No sessions in stack, can create new session";
 
             // compose status
             return Json(new { Ready = !isFull, Message = message }, jsonSettings);
@@ -154,7 +154,7 @@ namespace UiaDriverServer.Controllers
             sessions.AddOrReplace(session.SessionId, session);
 
             // put to screen
-            var message = $"session [{session.SessionId}] for [{session.Application.StartInfo.FileName}] created successfully";
+            var message = $"Create-Session -Session [{session.SessionId}] -Application [{session.Application.StartInfo.FileName}] = Created";
             Trace.TraceInformation(message);
 
             // set response
@@ -177,7 +177,7 @@ namespace UiaDriverServer.Controllers
             sessions.Remove(id);
 
             // put to screen
-            var message = $"session [{id}] for [{session.Application.StartInfo.FileName}] deleted successfully";
+            var message = $"Delete-Session -Session [{id}] -Application [{session.Application.StartInfo.FileName}] = NoContent";
             Trace.TraceInformation(message);
 
             return Ok();
@@ -224,7 +224,7 @@ namespace UiaDriverServer.Controllers
             if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
             {
                 var exception =
-                    new ArgumentException("platform name must be [windows]", nameof(capabilities));
+                    new ArgumentException("Platform name must be 'windows'", nameof(capabilities));
                 return InternalServerError(exception);
             }
             passed = true;
@@ -233,7 +233,7 @@ namespace UiaDriverServer.Controllers
 
         private ArgumentException Get(string capabilities)
         {
-            const string m = "you must provide [{0}] capability";
+            const string m = "You must provide [{0}] capability";
             var message = string.Format(m, capabilities);
             return new ArgumentException(message, nameof(capabilities));
         }
@@ -252,7 +252,7 @@ namespace UiaDriverServer.Controllers
 
         private void Exit() => Task.Run(() =>
         {
-            Trace.TraceInformation("shutting down...");
+            Trace.TraceInformation("Shutting down...");
             Thread.Sleep(1000);
             Environment.Exit(0);
         });
