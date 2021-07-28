@@ -1,14 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.Serialization;
 
 namespace UiaDriverServer.Dto
 {
+    [DataContract]
     internal class ClickablePoint
     {
+        public ClickablePoint()
+            : this(xpos: 0, ypos: 0)
+        { }
+
+        public ClickablePoint(int xpos, int ypos)
+        {
+            XPos = xpos;
+            YPos = ypos;
+        }
+
+        [DataMember]
         public int XPos { get; set; }
+
+        [DataMember]
         public int YPos { get; set; }
     }
 }

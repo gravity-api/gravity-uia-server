@@ -7,11 +7,11 @@ namespace UiaDriverServer.Extensions
     internal static class ProcessExtensions
     {
         /// <summary>
-        /// wait for process main window handle to be available
+        /// Wait for <see cref="Process"/> main window handle to be available.
         /// </summary>
-        /// <param name="p">process to wait</param>
-        /// <param name="timeout">timeout until return false</param>
-        /// <returns>update process state</returns>
+        /// <param name="p"><see cref="Process"/> to wait for.</param>
+        /// <param name="timeout">Timeout until return false.</param>
+        /// <returns>Self reference.</returns>
         public static Process WaitForHandle(this Process p, TimeSpan timeout)
         {
             // setup            
@@ -20,7 +20,7 @@ namespace UiaDriverServer.Extensions
             // iterate
             while (timeoutCounter < timeout)
             {
-                if(p.MainWindowHandle != default(IntPtr))
+                if(p.MainWindowHandle != default)
                 {
                     return p;
                 }

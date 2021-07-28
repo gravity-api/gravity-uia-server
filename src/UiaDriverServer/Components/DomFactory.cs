@@ -97,7 +97,7 @@ namespace UiaDriverServer.Components
         private string ElementAttributes(IUIAutomationElement element)
         {
             // load attributes
-            var attributes = element.AsAttributes();
+            var attributes = element.GetAttributes();
             var runtime = element.GetRuntimeId().OfType<int>();
             var id = JsonConvert.SerializeObject(runtime);
             attributes.Add("id", id);

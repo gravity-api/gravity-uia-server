@@ -16,6 +16,7 @@
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.treescope?view=netframework-4.7.2
  */
 using Newtonsoft.Json;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
-using UiaDriverServer.Components;
+
 using UIAutomationClient;
 
 namespace UiaDriverServer.Dto
@@ -50,6 +51,11 @@ namespace UiaDriverServer.Dto
         /// gets the current application run-time id
         /// </summary>
         public int[] Runtime { get; private set; }
+
+        /// <summary>
+        /// Gets or set a value indicates if this session is native or not.
+        /// </summary>
+        public bool IsNative => GetIsNative();
 
         /// <summary>
         /// the application which is under the current session
@@ -91,7 +97,6 @@ namespace UiaDriverServer.Dto
             // setup            
             var timeout = TimeSpan.FromSeconds(60);
             var timeoutCounter = TimeSpan.Zero;
-            var cacheRequest = Automation.GetCacheRequest();
 
             // iterate
             while (timeoutCounter < timeout)
@@ -103,7 +108,7 @@ namespace UiaDriverServer.Dto
                 var root = Automation.GetRootElement();
                 var application = root.FindFirst(TreeScope.TreeScope_Descendants, condition);
 
-                var isReady = application != null && application.CurrentNativeWindowHandle != default(IntPtr);
+                var isReady = application != null && application.CurrentNativeWindowHandle != default;
                 if (isReady)
                 {
                     if (Runtime?.Length <= 0)
@@ -133,6 +138,20 @@ namespace UiaDriverServer.Dto
             return isRuntime
                 ? Automation.CreatePropertyCondition(id, Runtime)
                 : Automation.CreatePropertyCondition(id, Application.MainWindowHandle);
+        }
+
+        private bool GetIsNative()
+        {
+            // members
+            var key = UiaCapability.UseNativeEvents;
+            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
+
+            // setup
+            var capabilites = Capabilities;
+            var isNative = capabilites.ContainsKey(key);
+
+            // get
+            return isNative && $"{capabilites[key]}".Equals("true", Compare);
         }
     }
 }

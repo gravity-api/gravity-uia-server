@@ -11,12 +11,17 @@
  * docs.w3c.web-driver
  * https://www.w3.org/TR/webdriver1/#new-session
  * https://www.w3.org/TR/webdriver1/#delete-session
+ * 
+ * docs.c-sharpcorner
+ * https://www.c-sharpcorner.com/uploadfile/puranindia/windows-management-instrumentation-in-C-Sharp/
  */
 using Newtonsoft.Json.Linq;
 
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Management;
+using System.Management.Instrumentation;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -39,7 +44,7 @@ namespace UiaDriverServer.Controllers
     /// a single instantiation of a particular user agent,
     /// including all its child browsers/windows
     /// </summary>
-    public class SessionController : Api
+    public class SessionController : UiaController
     {
         // native iterop       
         [DllImport("user32.dll")]
@@ -112,6 +117,12 @@ namespace UiaDriverServer.Controllers
             // evaluate capabilities
             var capabilities = ((JToken)dto).ToObject<Capabilities>();
 
+            ManagementClass mc = new ManagementClass("Win32_VideoController");
+            var p = mc.Properties;
+            var d = mc["VideoModeDescription"];
+            ManagementObjectCollection mcCollection = mc.GetInstances();
+            var a = "";
+
             // TODO: reactivate user validation
             // feature compliance
             // LoadFeatures(capabilities, "webdriver-uia");
@@ -133,7 +144,7 @@ namespace UiaDriverServer.Controllers
             var process = Get(executeable, args).WaitForHandle(TimeSpan.FromSeconds(60));
 
             // exit conditions
-            if (process.MainWindowHandle == default(IntPtr))
+            if (process.MainWindowHandle == default)
             {
                 return InternalServerError();
             }
@@ -151,7 +162,7 @@ namespace UiaDriverServer.Controllers
             // apply session
             session.Dom = domFactory.Create();
             session.SessionId = $"{process.MainWindowHandle}";
-            sessions.AddOrReplace(session.SessionId, session);
+            sessions[session.SessionId] = session;
 
             // put to screen
             var message = $"Create-Session -Session [{session.SessionId}] -Application [{session.Application.StartInfo.FileName}] = Created";

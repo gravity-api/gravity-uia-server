@@ -20,13 +20,13 @@ namespace UiaDriverServer.Controllers
     /// <summary>
     /// base class for all web-driver controllers (holds controllers state)
     /// </summary>
-    public abstract class Api : ApiController
+    public abstract class UiaController : ApiController
     {
         // members: state
         internal static readonly IDictionary<string, Session> sessions = new ConcurrentDictionary<string, Session>();
         internal readonly JsonSerializerSettings jsonSettings;
 
-        protected Api()
+        protected UiaController()
         {
             jsonSettings = Utilities.GetJsonSettings();
         }

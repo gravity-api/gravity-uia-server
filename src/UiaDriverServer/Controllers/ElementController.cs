@@ -41,7 +41,7 @@ using UIAutomationClient;
 
 namespace UiaDriverServer.Controllers
 {
-    public class ElementController : Api
+    public class ElementController : UiaController
     {
         // members: state
         private Session session;
@@ -61,7 +61,7 @@ namespace UiaDriverServer.Controllers
             }
 
             // initialize & refresh session
-            session = GetSession(s).RefreshDom();
+            session = GetSession(s).RevokeVirtualDom();
             var locationStrategy = ((JToken)dto).ToObject<LocationStrategy>();
 
             // flat point element (element map by x, y for not discoverable element or flat action)
@@ -70,7 +70,7 @@ namespace UiaDriverServer.Controllers
             {
                 // update state
                 var reference = $"{Guid.NewGuid()}";
-                session.Elements.AddOrReplace(reference, e);
+                session.Elements[reference] = e;
 
                 // value response
                 var v = new Dictionary<string, string> { [Utilities.ELEMENT_REFERENCE] = reference };
@@ -89,11 +89,11 @@ namespace UiaDriverServer.Controllers
             var aElement = Get(domRuntime);
 
             // update state
-            session.Elements.AddOrReplace(domRuntime, new Element
+            session.Elements[domRuntime] = new Element
             {
                 UIAutomationElement = aElement,
                 Node = dElement
-            });
+            };
 
             // value response
             var value = new Dictionary<string, string> { [Utilities.ELEMENT_REFERENCE] = domRuntime };
@@ -167,7 +167,7 @@ namespace UiaDriverServer.Controllers
 
             // load cords
             var cords = JsonConvert.DeserializeObject<int[]>(Regex.Match(locationStrategy.Value, P2).Value);
-            return new Element { ClickablePoint = new ClickablePoint { XPos = cords[0], YPos = cords[1] } };
+            return new Element { ClickablePoint = new ClickablePoint(xpos: cords[0], ypos: cords[1]) };
         }
 
         private string GetDomRuntime(LocationStrategy locationStrategy)
