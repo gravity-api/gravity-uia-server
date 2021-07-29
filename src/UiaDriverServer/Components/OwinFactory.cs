@@ -11,6 +11,8 @@
 using Microsoft.Owin.Hosting;
 using System;
 using System.Diagnostics;
+
+using UiaDriverServer.Extensions;
 using UiaDriverServer.Setup;
 
 namespace UiaDriverServer.Components
@@ -18,7 +20,7 @@ namespace UiaDriverServer.Components
     internal class OwinFactory
     {
         // constants
-        private const string CMPT_MSG = "[{0}] for [{1}] initialized";
+        private const string CmptMsg = "[{0}] for [{1}] initialized";
 
         // members: state
         private StartOptions options;
@@ -42,7 +44,7 @@ namespace UiaDriverServer.Components
 
             // initialize service-host
             options.Urls.Add($"http://+:{port}");
-            Trace.TraceInformation(CMPT_MSG, "ServiceEndpoint", serviceFullName);
+            Trace.TraceInformation(CmptMsg, "ServiceEndpoint", serviceFullName);
 
             // expose service-host
             return this;
@@ -73,7 +75,7 @@ namespace UiaDriverServer.Components
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Failed to open [{serviceFullName}] Web API due to --- {ex} ---");
+                Trace.TraceError($"Failed to open {serviceFullName} Web API due to --- {ex} ---");
                 throw;
             }
         }

@@ -20,8 +20,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Management;
-using System.Management.Instrumentation;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -117,16 +115,6 @@ namespace UiaDriverServer.Controllers
             // evaluate capabilities
             var capabilities = ((JToken)dto).ToObject<Capabilities>();
 
-            ManagementClass mc = new ManagementClass("Win32_VideoController");
-            var p = mc.Properties;
-            var d = mc["VideoModeDescription"];
-            ManagementObjectCollection mcCollection = mc.GetInstances();
-            var a = "";
-
-            // TODO: reactivate user validation
-            // feature compliance
-            // LoadFeatures(capabilities, "webdriver-uia");
-
             // evaluate
             var eval = Evaluate(capabilities, out bool passed);
             if (!passed)
@@ -165,7 +153,7 @@ namespace UiaDriverServer.Controllers
             sessions[session.SessionId] = session;
 
             // put to screen
-            var message = $"Create-Session -Session [{session.SessionId}] -Application [{session.Application.StartInfo.FileName}] = Created";
+            var message = $"Create-Session -Session {session.SessionId} -Application {session.Application.StartInfo.FileName} = Created";
             Trace.TraceInformation(message);
 
             // set response
@@ -182,13 +170,12 @@ namespace UiaDriverServer.Controllers
             // get session
             var session = GetSession(id);
 
-            // delete
-            session.Application.Kill();
-            session.Application?.Dispose();
+            // delete remove from state
+            session.Delete();
             sessions.Remove(id);
 
             // put to screen
-            var message = $"Delete-Session -Session [{id}] -Application [{session.Application.StartInfo.FileName}] = NoContent";
+            var message = $"Delete-Session -Session [{id}] -Application [{session?.Application.StartInfo.FileName}] = NoContent";
             Trace.TraceInformation(message);
 
             return Ok();

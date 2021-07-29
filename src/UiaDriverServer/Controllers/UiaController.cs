@@ -14,6 +14,7 @@ using System.Web.Http;
 
 using UiaDriverServer.Components;
 using UiaDriverServer.Dto;
+using UiaDriverServer.Extensions;
 
 namespace UiaDriverServer.Controllers
 {

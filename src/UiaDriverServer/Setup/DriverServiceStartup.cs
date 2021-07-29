@@ -7,6 +7,7 @@
 using Owin;
 using System.Web.Http;
 using UiaDriverServer.Components;
+using UiaDriverServer.Extensions;
 
 namespace UiaDriverServer.Setup
 {

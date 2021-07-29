@@ -73,6 +73,16 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
+        /// Delete a Session, disposing all the resources bound to ti.
+        /// </summary>
+        /// <param name="session">The session to delete.</param>
+        public static void Delete(this Session session)
+        {
+            session?.Application?.Kill();
+            session?.Application?.Dispose();
+        }
+
+        /// <summary>
         /// Revoke the virtual DOM for the Session under automation.
         /// </summary>
         /// <param name="session">The session to revoke DOM for.</param>
@@ -241,6 +251,15 @@ namespace UiaDriverServer.Extensions
         public static IUIAutomationElement Click(this IUIAutomationElement element)
         {
             return InvokeClick(element, isNative: false);
+        }
+
+        /// <summary>
+        /// Select the element if possible.
+        /// </summary>
+        /// <param name="element">The element to select on.</param>
+        public static IUIAutomationElement Select(this IUIAutomationElement element)
+        {
+            return InvokeSelectionItem(element);
         }
 
         /// <summary>
@@ -575,13 +594,17 @@ namespace UiaDriverServer.Extensions
             }
 
             // setup
-            var width = Screen.PrimaryScreen.WorkingArea.Width;
-            var height = Screen.PrimaryScreen.WorkingArea.Height;
+            //var (Width, Height) = Utilities.GetScreenResultion();
             var rect = element.CurrentBoundingRectangle;
 
             // build
-            x = (width - (rect.left + rect.right));
-            y = (height - (rect.top + rect.bottom));
+            //x = rect.top + (Math.Abs(rect.bottom - rect.top) / 2);
+            //y = rect.left + (Math.Abs(rect.right - rect.left) / 2);
+            //x = Width - ((rect.left + rect.right) / 2);
+            //y = Height - ((rect.top + rect.bottom) / 2);
+
+            x = rect.top + 1;
+            y = rect.left + 1;
 
             // get
             return new ClickablePoint(x, y);
@@ -681,6 +704,7 @@ namespace UiaDriverServer.Extensions
             }
             try
             {
+                element.SetFocus();
                 pattern.Select();
             }
             catch (Exception e)

@@ -1,36 +1,25 @@
-﻿/*
- * CHANGE LOG - keep only last 5 threads
- * 
- * 2019-02-07
- *    - modify: better xml comments & document reference
- *    
- * 2019-02-09
- *    - modify: using simple deserialize for getting runtime id from DOM
- */
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
+using System.Management;
 using System.Net;
 using System.Net.Sockets;
-using System.Xml.XPath;
-using UiaDriverServer.Dto;
+using System.Text.RegularExpressions;
+
 using UIAutomationClient;
 
-namespace UiaDriverServer.Components
+namespace UiaDriverServer.Extensions
 {
-    /// <summary>
-    /// utilities class container for common and general actions
-    /// </summary>
     internal static class Utilities
     {
         /// <summary>
         /// web-driver element reference key - must be returned with element object value
         /// </summary>
-        public const string ELEMENT_REFERENCE = "element-6066-11e4-a52e-4f735466cecf";
+        public const string EelementReference = "element-6066-11e4-a52e-4f735466cecf";
 
         /// <summary>
         /// gets the local IP address of the host machine
@@ -50,7 +39,6 @@ namespace UiaDriverServer.Components
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"{ex}");
                 return string.Empty;
             }
         }
@@ -96,6 +84,45 @@ namespace UiaDriverServer.Components
             r.TreeScope = TreeScope.TreeScope_Descendants;
             r.TreeFilter = automation.CreateTrueCondition();
             return r;
+        }
+
+        /// <summary>
+        /// Gets the primary screen full resolution.
+        /// </summary>
+        /// <returns>Primary screen full resolution.</returns>
+        public static (int Width, int Height) GetScreenResultion()
+        {
+            // setup
+            var query = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
+            var queryCollection = query.Get();
+
+            // build
+            var videoModeDescription = GetVideoModeDescription(queryCollection);
+            var x = Regex.Match(videoModeDescription, @"^\d+").Value;
+            var y = Regex.Match(videoModeDescription, @"(?<=x\s+)\d+(?=\s+x)").Value;
+
+            // parse
+            _ = int.TryParse(x, out int xOut);
+            _ = int.TryParse(y, out int yOut);
+
+            // get
+            return (xOut, yOut);
+        }
+
+        private static string GetVideoModeDescription(ManagementObjectCollection queryCollection)
+        {
+            foreach (var managementObject in queryCollection)
+            {
+                var propertyDataCollection = managementObject.Properties;
+                foreach (var propertyData in propertyDataCollection)
+                {
+                    if (propertyData.Name.Equals("VideoModeDescription", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return $"{propertyData.Value}";
+                    }
+                }
+            }
+            return string.Empty;
         }
     }
 }

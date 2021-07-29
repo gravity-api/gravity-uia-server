@@ -25,6 +25,8 @@ using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
 
+using UiaDriverServer.Extensions;
+
 using UIAutomationClient;
 
 namespace UiaDriverServer.Dto
@@ -35,6 +37,7 @@ namespace UiaDriverServer.Dto
         {
             Automation = automation;
             Elements = new ConcurrentDictionary<string, Element>();
+            ScreenResolution = Utilities.GetScreenResultion();
         }
 
         /// <summary>
@@ -53,9 +56,14 @@ namespace UiaDriverServer.Dto
         public int[] Runtime { get; private set; }
 
         /// <summary>
-        /// Gets or set a value indicates if this session is native or not.
+        /// Gets the value indicates if this session is native or not.
         /// </summary>
         public bool IsNative => GetIsNative();
+
+        /// <summary>
+        /// Gets the primary screen Width and Height.
+        /// </summary>
+        public (int Width, int Height) ScreenResolution { get; }
 
         /// <summary>
         /// the application which is under the current session

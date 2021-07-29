@@ -73,7 +73,7 @@ namespace UiaDriverServer.Controllers
                 session.Elements[reference] = e;
 
                 // value response
-                var v = new Dictionary<string, string> { [Utilities.ELEMENT_REFERENCE] = reference };
+                var v = new Dictionary<string, string> { [Utilities.EelementReference] = reference };
                 return Json(new { Value = v }, jsonSettings);
             }
 
@@ -96,7 +96,7 @@ namespace UiaDriverServer.Controllers
             };
 
             // value response
-            var value = new Dictionary<string, string> { [Utilities.ELEMENT_REFERENCE] = domRuntime };
+            var value = new Dictionary<string, string> { [Utilities.EelementReference] = domRuntime };
             return Json(new { Value = value }, jsonSettings);
         }
 
