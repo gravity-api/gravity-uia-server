@@ -17,12 +17,10 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Web.Http;
 
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
-
-using UIAutomationClient;
 
 namespace UiaDriverServer.Controllers
 {
@@ -48,7 +46,7 @@ namespace UiaDriverServer.Controllers
 
             // sync
             session.RevokeVirtualDom();
-            
+
             // get
             return Ok();
         }
@@ -69,7 +67,7 @@ namespace UiaDriverServer.Controllers
 
             // sync
             session.RevokeVirtualDom();
-            
+
             // get
             return Ok();
         }
@@ -136,18 +134,12 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetMessageExtraInfo();
-
         // POST wd/hub/session/[s]/element/[e]/native/copy
         // POST session/[s]/element/[e]/native/copy
         [Route("wd/hub/session/{s}/element/{e}/native/copy")]
         [Route("session/{s}/element/{e}/native/copy")]
         [HttpPost]
-        public IHttpActionResult CopyElement(string s, string e)
+        public IHttpActionResult InvokeCopy(string s, string e)
         {
             // load action information
             var session = GetSession(s);
@@ -156,20 +148,19 @@ namespace UiaDriverServer.Controllers
             // invoke
             element.UIAutomationElement.SetFocus();
 
-            // inputs
-            var ctrlDown = GetInput(0x1D, KeyEventF.KeyDown | KeyEventF.Scancode);
-            var ctrlUp = GetInput(0x1D, KeyEventF.KeyUp | KeyEventF.Scancode);
-            var cDown = GetInput(0x2E, KeyEventF.KeyDown | KeyEventF.Scancode);
-            var cUp = GetInput(0x2E, KeyEventF.KeyUp | KeyEventF.Scancode);
-            
+            // inputs           
             var inputs = new[]
             {
-                ctrlDown,
-                cDown,
-                cUp,
-                ctrlUp
+                // press CTRL+C
+                GetKeyboardInput(0x1D, KeyEventF.KeyDown | KeyEventF.Scancode),
+                GetKeyboardInput(0x2E, KeyEventF.KeyDown | KeyEventF.Scancode),
+                // release CTRL+C
+                GetKeyboardInput(0x2E, KeyEventF.KeyUp | KeyEventF.Scancode),
+                GetKeyboardInput(0x1D, KeyEventF.KeyUp | KeyEventF.Scancode)
             };
-            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+
+            // invoke
+            session.Automation.SendInput(inputs);
 
             // sync
             session.RevokeVirtualDom();
@@ -193,19 +184,18 @@ namespace UiaDriverServer.Controllers
             element.UIAutomationElement.SetFocus();
 
             // inputs
-            var ctrlDown = GetInput(0x1D, KeyEventF.KeyDown | KeyEventF.Scancode);
-            var ctrlUp = GetInput(0x1D, KeyEventF.KeyUp | KeyEventF.Scancode);
-            var fDown = GetInput(0x2F, KeyEventF.KeyDown | KeyEventF.Scancode);
-            var fUp = GetInput(0x2F, KeyEventF.KeyUp | KeyEventF.Scancode);
-
             var inputs = new[]
             {
-                ctrlDown,
-                fDown,
-                fUp,
-                ctrlUp
+                // press CTRL+V
+                GetKeyboardInput(0x1D, KeyEventF.KeyDown | KeyEventF.Scancode),
+                GetKeyboardInput(0x2F, KeyEventF.KeyDown | KeyEventF.Scancode),
+                // release CTRL+V
+                GetKeyboardInput(0x2F, KeyEventF.KeyUp | KeyEventF.Scancode),
+                GetKeyboardInput(0x1D, KeyEventF.KeyUp | KeyEventF.Scancode)
             };
-            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+
+            // invoke
+            session.Automation.SendInput(inputs);
 
             // sync
             session.RevokeVirtualDom();
@@ -214,7 +204,10 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        private Input GetInput(ushort wScan, KeyEventF flags) => new Input
+        // Utilities
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetMessageExtraInfo();
+        private static Input GetKeyboardInput(ushort wScan, KeyEventF flags) => new()
         {
             type = (int)InputType.Keyboard,
             u = new InputUnion
@@ -228,85 +221,5 @@ namespace UiaDriverServer.Controllers
                 }
             }
         };
-    }
-
-    [Flags]
-    public enum InputType
-    {
-        Mouse = 0,
-        Keyboard = 1,
-        Hardware = 2
-    }
-
-    [Flags]
-    public enum KeyEventF
-    {
-        KeyDown = 0x0000,
-        ExtendedKey = 0x0001,
-        KeyUp = 0x0002,
-        Unicode = 0x0004,
-        Scancode = 0x0008
-    }
-
-    [Flags]
-    public enum MouseEventF
-    {
-        Absolute = 0x8000,
-        HWheel = 0x01000,
-        Move = 0x0001,
-        MoveNoCoalesce = 0x2000,
-        LeftDown = 0x0002,
-        LeftUp = 0x0004,
-        RightDown = 0x0008,
-        RightUp = 0x0010,
-        MiddleDown = 0x0020,
-        MiddleUp = 0x0040,
-        VirtualDesk = 0x4000,
-        Wheel = 0x0800,
-        XDown = 0x0080,
-        XUp = 0x0100
-    }
-
-    public struct Input
-    {
-        public int type;
-        public InputUnion u;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct KeyboardInput
-    {
-        public ushort wVk;
-        public ushort wScan;
-        public uint dwFlags;
-        public uint time;
-        public IntPtr dwExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MouseInput
-    {
-        public int dx;
-        public int dy;
-        public uint mouseData;
-        public uint dwFlags;
-        public uint time;
-        public IntPtr dwExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct HardwareInput
-    {
-        public uint uMsg;
-        public ushort wParamL;
-        public ushort wParamH;
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    public struct InputUnion
-    {
-        [FieldOffset(0)] public MouseInput mi;
-        [FieldOffset(0)] public KeyboardInput ki;
-        [FieldOffset(0)] public HardwareInput hi;
     }
 }

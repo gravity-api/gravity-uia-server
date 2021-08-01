@@ -20,14 +20,16 @@
  * https://docs.microsoft.com/en-us/dotnet/api/system.xml.linq.xdocument?view=netframework-4.7.2
  */
 using Newtonsoft.Json;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+
+using UIAutomationClient;
 using UiaDriverServer.Dto;
 using UiaDriverServer.Extensions;
-using UIAutomationClient;
 
 namespace UiaDriverServer.Components
 {
@@ -75,7 +77,7 @@ namespace UiaDriverServer.Components
             var tagName = element.GetTagName();
 
             // add current element row
-            domWriter.Append("<").Append(tagName).Append(" ").Append(attributes).AppendLine("> ");
+            domWriter.Append('<').Append(tagName).Append(' ').Append(attributes).AppendLine("> ");
 
             // exit routine
             const TreeScope scope = TreeScope.TreeScope_Children;
@@ -94,7 +96,7 @@ namespace UiaDriverServer.Components
             domWriter.Append("</").Append(tagName).AppendLine(">");
         }
 
-        private string ElementAttributes(IUIAutomationElement element)
+        private static string ElementAttributes(IUIAutomationElement element)
         {
             // load attributes
             var attributes = element.GetAttributes();

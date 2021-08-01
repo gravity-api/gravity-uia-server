@@ -47,7 +47,7 @@ namespace UiaDriverServer.Extensions
         /// gets the json response settings and formatting
         /// </summary>
         /// <returns>settings for Newtonsoft.Json.JsonSerializer object</returns>
-        public static JsonSerializerSettings GetJsonSettings() => new JsonSerializerSettings
+        public static JsonSerializerSettings GetJsonSettings() => new()
         {
             Formatting = Formatting.Indented,
             ContractResolver = new CamelCasePropertyNamesContractResolver()

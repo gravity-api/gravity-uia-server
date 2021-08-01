@@ -10,23 +10,25 @@
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.treescope?view=netframework-4.7.2
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.propertycondition?view=netframework-4.7.2
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.boundingrectangleproperty?view=net-5.0
+ * 
+ * codemag.com
+ * https://www.codemag.com/article/0810122/Creating-UI-Automation-Client-Applications
  */
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using System.Xml.XPath;
-
-using UiaDriverServer.Attributes;
-using UiaDriverServer.Components;
-using UiaDriverServer.Dto;
 
 using UIAutomationClient;
 
-using static System.Windows.Automation.AutomationElement;
+using UiaDriverServer.Attributes;
+using UiaDriverServer.Components;
+using UiaDriverServer.Contracts;
+using UiaDriverServer.Dto;
 
 namespace UiaDriverServer.Extensions
 {
@@ -41,12 +43,38 @@ namespace UiaDriverServer.Extensions
         public static extern bool GetCursorPos(out tagPOINT lpPoint);
 
         [DllImport("user32.dll")]
-        private static extern bool SetCursorPos(int x, int y);
+        private static extern bool SetPhysicalCursorPos(int x, int y);
 
+        [Obsolete("This function has been superseded. Use SendInput instead.")]
         [DllImport("user32.dll")]
         private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetMessageExtraInfo();
+
         #region *** Session     ***
+        /// <summary>
+        /// Synthesizes keystrokes, mouse motions, and button clicks.
+        /// </summary>
+        /// <param name="automation">The <see cref="CUIAutomation8"/> to send input to.</param>
+        /// <param name="inputs">A collection of input objects.</param>
+        /// <returns>The number of events that it successfully inserted into the keyboard or mouse input stream.</returns>
+        /// <remarks>If the function returns zero, the input was already blocked by another thread.</remarks>
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used as 'Monkey Patch'")]
+        [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "False positive on IDE0060")]
+        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 automation,  params Input[] inputs)
+        {
+            // invoke
+            var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            var errorCode = Marshal.GetLastWin32Error();
+
+            // get
+            return (numberOfevents, errorCode);
+        }
+
         /// <summary>
         /// Gets child element from root
         /// </summary>
@@ -68,7 +96,7 @@ namespace UiaDriverServer.Extensions
         /// <returns>Self reference.</returns>
         public static CUIAutomation8 SetCursorPosition(this CUIAutomation8 automation, int x, int y)
         {
-            SetCursorPos(x, y);
+            SetPhysicalCursorPos(x, y);
             return automation;
         }
 
@@ -326,7 +354,7 @@ namespace UiaDriverServer.Extensions
             var point = InvokeGetClickablePoint(element);
 
             // invoke
-            SetCursorPos(point.XPos, point.YPos);
+            SetPhysicalCursorPos(point.XPos, point.YPos);
             mouse_event(MouseEventLeftDown, point.XPos, point.YPos, 0, 0);
             mouse_event(MouseEventLeftUp, point.XPos, point.YPos, 0, 0);
 
@@ -366,11 +394,12 @@ namespace UiaDriverServer.Extensions
         private static IUIAutomationElement InvokeSendKeys(
             IUIAutomationElement element, string text, bool isNative)
         {
+            // TODO: implement unmanaged!
             // local functions
             void SetValue()
             {
                 element.SetFocus();
-                System.Windows.Forms.SendKeys.SendWait(text);
+                // System.Windows.Forms.SendKeys.SendWait(text);
             }
 
             // get value pattern
@@ -399,54 +428,6 @@ namespace UiaDriverServer.Extensions
             // get
             return element;
         }
-
-        /// <summary>
-        /// Gets the <see cref="IUIAutomationElement"/> information as a collection of key/value.
-        /// </summary>
-        /// <param name="info"><see cref="IUIAutomationElement"/> information.</param>
-        /// <returns>A collection of key/value.</returns>
-        public static IDictionary<string, string> GetAttributes(this IUIAutomationElement info)
-        {
-            while (true)
-            {
-                try
-                {
-                    return InvokeGetAttributes(info);
-                }
-                catch (COMException e) when (e != null)
-                {
-                    // ignore exceptions
-                }
-            }
-        }
-
-        private static IDictionary<string, string> InvokeGetAttributes(IUIAutomationElement info) => new Dictionary<string, string>
-        {
-            [nameof(AutomationElementInformation.AcceleratorKey).ToCamelCase()] = info.CurrentAcceleratorKey,
-            [nameof(AutomationElementInformation.AccessKey).ToCamelCase()] = info.CurrentAccessKey,
-            ["AriaProperties".ToCamelCase()] = info.CurrentAriaProperties,
-            ["AriaRole".ToCamelCase()] = info.CurrentAriaRole,
-            [nameof(AutomationElementInformation.AutomationId).ToCamelCase()] = info.CurrentAutomationId,
-            [nameof(AutomationElementInformation.BoundingRectangle.Bottom).ToCamelCase()] = $"{info.CurrentBoundingRectangle.bottom}",
-            [nameof(AutomationElementInformation.BoundingRectangle.Left).ToCamelCase()] = $"{info.CurrentBoundingRectangle.left}",
-            [nameof(AutomationElementInformation.BoundingRectangle.Right).ToCamelCase()] = $"{info.CurrentBoundingRectangle.right}",
-            [nameof(AutomationElementInformation.BoundingRectangle.Top).ToCamelCase()] = $"{info.CurrentBoundingRectangle.top}",
-            [nameof(AutomationElementInformation.ClassName).ToCamelCase()] = info.CurrentClassName,
-            [nameof(AutomationElementInformation.FrameworkId).ToCamelCase()] = info.CurrentFrameworkId,
-            [nameof(AutomationElementInformation.HelpText).ToCamelCase()] = info.CurrentHelpText.ParseForXml(),
-            [nameof(AutomationElementInformation.IsContentElement).ToCamelCase()] = info.CurrentIsContentElement == 1 ? "true" : "false",
-            [nameof(AutomationElementInformation.IsControlElement).ToCamelCase()] = info.CurrentIsControlElement == 1 ? "true" : "false",
-            [nameof(AutomationElementInformation.IsEnabled).ToCamelCase()] = info.CurrentIsEnabled == 1 ? "true" : "false",
-            [nameof(AutomationElementInformation.IsKeyboardFocusable).ToCamelCase()] = info.CurrentIsKeyboardFocusable == 1 ? "true" : "false",
-            [nameof(AutomationElementInformation.IsPassword).ToCamelCase()] = info.CurrentIsPassword == 1 ? "true" : "false",
-            [nameof(AutomationElementInformation.IsRequiredForForm).ToCamelCase()] = info.CurrentIsRequiredForForm == 1 ? "true" : "false",
-            [nameof(AutomationElementInformation.ItemStatus).ToCamelCase()] = info.CurrentItemStatus,
-            [nameof(AutomationElementInformation.ItemType).ToCamelCase()] = info.CurrentItemType,
-            [nameof(AutomationElementInformation.Name).ToCamelCase()] = info.CurrentName.ParseForXml(),
-            [nameof(AutomationElementInformation.NativeWindowHandle).ToCamelCase()] = $"{info.CurrentNativeWindowHandle}",
-            [nameof(AutomationElementInformation.Orientation).ToCamelCase()] = $"{info.CurrentOrientation}",
-            [nameof(AutomationElementInformation.ProcessId).ToCamelCase()] = $"{info.CurrentProcessId}"
-        };
 
         /// <summary>
         /// generates xml tag-name for this automation element
@@ -530,52 +511,51 @@ namespace UiaDriverServer.Extensions
 
         #region *** Information ***
         /// <summary>
-        /// gets the element information as key/value pair
+        /// Gets the <see cref="IUIAutomationElement"/> information as a collection of key/value.
         /// </summary>
-        /// <param name="info">element information</param>
-        /// <returns>element information as key/value pair</returns>
-        public static IDictionary<string, string> GetAttributes(this AutomationElementInformation info)
+        /// <param name="info"><see cref="IUIAutomationElement"/> information.</param>
+        /// <returns>A collection of key/value.</returns>
+        public static IDictionary<string, string> GetAttributes(this IUIAutomationElement info)
         {
-            try
+            while (true)
             {
-                return InvokeGetAttributes(info);
-            }
-            catch (Exception e) when (e != null)
-            {
-                throw;
+                try
+                {
+                    return InvokeGetAttributes(info);
+                }
+                catch (COMException e) when (e != null)
+                {
+                    // ignore exceptions
+                }
             }
         }
 
-        private static IDictionary<string, string> InvokeGetAttributes(AutomationElementInformation info) => new Dictionary<string, string>
+        private static IDictionary<string, string> InvokeGetAttributes(IUIAutomationElement info) => new Dictionary<string, string>
         {
-            [nameof(info.AcceleratorKey).ToCamelCase()] = info.AcceleratorKey,
-            [nameof(info.AccessKey).ToCamelCase()] = info.AccessKey,
-            [nameof(info.AutomationId).ToCamelCase()] = info.AutomationId,
-            [nameof(info.BoundingRectangle.Bottom).ToCamelCase()] = $"{info.BoundingRectangle.Bottom}",
-            [nameof(info.BoundingRectangle.Height).ToCamelCase()] = $"{info.BoundingRectangle.Height}",
-            [nameof(info.BoundingRectangle.IsEmpty).ToCamelCase()] = $"{info.BoundingRectangle.IsEmpty}",
-            [nameof(info.BoundingRectangle.Left).ToCamelCase()] = $"{info.BoundingRectangle.Left}",
-            [nameof(info.BoundingRectangle.Right).ToCamelCase()] = $"{info.BoundingRectangle.Right}",
-            [nameof(info.BoundingRectangle.Top).ToCamelCase()] = $"{info.BoundingRectangle.Top}",
-            [nameof(info.BoundingRectangle.Width).ToCamelCase()] = $"{info.BoundingRectangle.Width}",
-            [nameof(info.BoundingRectangle.X).ToCamelCase()] = $"{info.BoundingRectangle.X}",
-            [nameof(info.BoundingRectangle.Y).ToCamelCase()] = $"{info.BoundingRectangle.Y}",
-            [nameof(info.ClassName).ToCamelCase()] = info.ClassName,
-            [nameof(info.ControlType).ToCamelCase()] = info.ControlType.LocalizedControlType,
-            [nameof(info.FrameworkId).ToCamelCase()] = info.FrameworkId,
-            [nameof(info.HelpText).ToCamelCase()] = info.HelpText.ParseForXml(),
-            [nameof(info.IsContentElement).ToCamelCase()] = $"{info.IsContentElement}",
-            [nameof(info.IsControlElement).ToCamelCase()] = $"{info.IsControlElement}",
-            [nameof(info.IsEnabled).ToCamelCase()] = $"{info.IsEnabled}",
-            [nameof(info.IsKeyboardFocusable).ToCamelCase()] = $"{info.IsKeyboardFocusable}",
-            [nameof(info.IsPassword).ToCamelCase()] = $"{info.IsPassword}",
-            [nameof(info.IsRequiredForForm).ToCamelCase()] = $"{info.IsRequiredForForm}",
-            [nameof(info.ItemStatus).ToCamelCase()] = info.ItemStatus,
-            [nameof(info.ItemType).ToCamelCase()] = info.ItemType,
-            [nameof(info.Name).ToCamelCase()] = info.Name.ParseForXml(),
-            [nameof(info.NativeWindowHandle).ToCamelCase()] = $"{info.NativeWindowHandle}",
-            [nameof(info.Orientation).ToCamelCase()] = $"{info.Orientation}",
-            [nameof(info.ProcessId).ToCamelCase()] = $"{info.ProcessId}"
+            ["AcceleratorKey".ToCamelCase()] = info.CurrentAcceleratorKey,
+            ["AccessKey".ToCamelCase()] = info.CurrentAccessKey,
+            ["AriaProperties".ToCamelCase()] = info.CurrentAriaProperties,
+            ["AriaRole".ToCamelCase()] = info.CurrentAriaRole,
+            ["AutomationId".ToCamelCase()] = info.CurrentAutomationId,
+            ["Bottom".ToCamelCase()] = $"{info.CurrentBoundingRectangle.bottom}",
+            ["Left".ToCamelCase()] = $"{info.CurrentBoundingRectangle.left}",
+            ["Right".ToCamelCase()] = $"{info.CurrentBoundingRectangle.right}",
+            ["Top".ToCamelCase()] = $"{info.CurrentBoundingRectangle.top}",
+            ["ClassName".ToCamelCase()] = info.CurrentClassName,
+            ["FrameworkId".ToCamelCase()] = info.CurrentFrameworkId,
+            ["HelpText".ToCamelCase()] = info.CurrentHelpText.ParseForXml(),
+            ["IsContentElement".ToCamelCase()] = info.CurrentIsContentElement == 1 ? "true" : "false",
+            ["IsControlElement".ToCamelCase()] = info.CurrentIsControlElement == 1 ? "true" : "false",
+            ["IsEnabled".ToCamelCase()] = info.CurrentIsEnabled == 1 ? "true" : "false",
+            ["IsKeyboardFocusable".ToCamelCase()] = info.CurrentIsKeyboardFocusable == 1 ? "true" : "false",
+            ["IsPassword".ToCamelCase()] = info.CurrentIsPassword == 1 ? "true" : "false",
+            ["IsRequiredForForm".ToCamelCase()] = info.CurrentIsRequiredForForm == 1 ? "true" : "false",
+            ["ItemStatus".ToCamelCase()] = info.CurrentItemStatus,
+            ["ItemType".ToCamelCase()] = info.CurrentItemType,
+            ["Name".ToCamelCase()] = info.CurrentName.ParseForXml(),
+            ["NativeWindowHandle".ToCamelCase()] = $"{info.CurrentNativeWindowHandle}",
+            ["Orientation".ToCamelCase()] = $"{info.CurrentOrientation}",
+            ["ProcessId".ToCamelCase()] = $"{info.CurrentProcessId}"
         };
         #endregion
 
@@ -594,17 +574,12 @@ namespace UiaDriverServer.Extensions
             }
 
             // setup
-            //var (Width, Height) = Utilities.GetScreenResultion();
-            var rect = element.CurrentBoundingRectangle;
-
-            // build
-            //x = rect.top + (Math.Abs(rect.bottom - rect.top) / 2);
-            //y = rect.left + (Math.Abs(rect.right - rect.left) / 2);
-            //x = Width - ((rect.left + rect.right) / 2);
-            //y = Height - ((rect.top + rect.bottom) / 2);
-
-            x = rect.top + 1;
-            y = rect.left + 1;
+            var left = element.CurrentBoundingRectangle.left;
+            var right = element.CurrentBoundingRectangle.right;
+            var top = element.CurrentBoundingRectangle.top;
+            var bottom = element.CurrentBoundingRectangle.bottom;
+            x = (left + right) / 2;
+            y = (top + bottom) / 2;
 
             // get
             return new ClickablePoint(x, y);

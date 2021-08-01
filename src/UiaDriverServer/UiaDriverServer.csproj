@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net48</TargetFramework>
+    <LangVersion>Latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -47,9 +48,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNet.WebApi.OwinSelfHost" Version="5.2.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="WindowsBase" Version="4.6.1055" />
+    <PackageReference Include="System.Management" Version="5.0.0" />
+   <!-- <PackageReference Include="WindowsBase" Version="4.6.1055" />-->
   </ItemGroup>
 
+  <!--
   <ItemGroup>
     <Reference Include="System.Management" />
     <Reference Include="System.Windows.Forms" />
@@ -58,4 +61,5 @@
     <Reference Include="UIAutomationProvider" />
     <Reference Include="UIAutomationTypes" />
   </ItemGroup>
+  -->
 </Project>
