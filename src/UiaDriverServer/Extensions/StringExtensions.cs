@@ -21,7 +21,7 @@ namespace UiaDriverServer.Extensions
         /// <returns>converted string</returns>
         public static string ToCamelCase(this string s)
         {
-            return (char.ToLowerInvariant(s[0]) + s.Substring(1)).Replace("_", string.Empty);
+            return (char.ToLowerInvariant(s[0]) + s[1..]).Replace("_", string.Empty);
         }
 
         /// <summary>
@@ -53,14 +53,12 @@ namespace UiaDriverServer.Extensions
                 var pdb = new Rfc2898DeriveBytes(encryptionKey, new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 });
                 encryptor.Key = pdb.GetBytes(32);
                 encryptor.IV = pdb.GetBytes(16);
-                using (var memoryStream = new MemoryStream())
+                using var memoryStream = new MemoryStream();
+                using (var cryptoStream = new CryptoStream(memoryStream, encryptor.CreateEncryptor(), CryptoStreamMode.Write))
                 {
-                    using (var cryptoStream = new CryptoStream(memoryStream, encryptor.CreateEncryptor(), CryptoStreamMode.Write))
-                    {
-                        cryptoStream.Write(clearBytes, 0, clearBytes.Length);
-                    }
-                    clearText = Convert.ToBase64String(memoryStream.ToArray());
+                    cryptoStream.Write(clearBytes, 0, clearBytes.Length);
                 }
+                clearText = Convert.ToBase64String(memoryStream.ToArray());
             }
             return clearText;
         }

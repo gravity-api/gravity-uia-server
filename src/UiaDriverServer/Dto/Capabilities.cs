@@ -5,7 +5,7 @@ namespace UiaDriverServer.Dto
     /// <summary>
     /// class to create the capabilities of the browser you require for IWebDriver
     /// </summary>
-    internal class Capabilities
+    public class Capabilities
     {
         /// <summary>
         /// desired-capabilities dictionary

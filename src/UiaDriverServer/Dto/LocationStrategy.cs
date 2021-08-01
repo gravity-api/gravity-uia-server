@@ -13,7 +13,7 @@ namespace UiaDriverServer.Dto
     /// an enumerated attribute deciding what technique should be used to
     /// search for elements in the current browsing context
     /// </summary>
-    internal class LocationStrategy
+    public class LocationStrategy
     {
         /// <summary>
         /// not implemented (not supported for UiA)

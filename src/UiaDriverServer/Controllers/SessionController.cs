@@ -1,35 +1,14 @@
-﻿/*
- * CHANGE LOG - keep only last 5 threads
- * 
- * 2019-02-07
- *    - modify: better xml comments & document reference
- *    
- * 2019-02-12
- *    - modify: align with standard capabilities (app, arguments & platformName)
- *    - modify: add capabilities validation
- * 
- * docs.w3c.web-driver
- * https://www.w3.org/TR/webdriver1/#new-session
- * https://www.w3.org/TR/webdriver1/#delete-session
- * 
- * docs.c-sharpcorner
- * https://www.c-sharpcorner.com/uploadfile/puranindia/windows-management-instrumentation-in-C-Sharp/
- */
-using Newtonsoft.Json.Linq;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+using System.Net.Mime;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Http;
 
 using UiaDriverServer.Components;
-using UiaDriverServer.Domain;
 using UiaDriverServer.Dto;
 using UiaDriverServer.Extensions;
 
@@ -37,11 +16,7 @@ using UIAutomationClient;
 
 namespace UiaDriverServer.Controllers
 {
-    // TODO: implement timeouts
-    /// <summary>
-    /// a single instantiation of a particular user agent,
-    /// including all its child browsers/windows
-    /// </summary>
+    [ApiController]
     public class SessionController : UiaController
     {
         // native iterop       
@@ -50,28 +25,29 @@ namespace UiaDriverServer.Controllers
 
         // GET wd/hub/status
         // GET status        
-        [Route("wd/hub/session")]
-        [Route("session")]
+        [Route("wd/hub/session/{id}")]
+        [Route("session/{id}")]
         [HttpGet]
-        public HttpResponseMessage Dom([FromUri] string id)
+        public IActionResult Dom([FromRoute] string id)
         {
             // setup conditions
             var haveSession = sessions.ContainsKey(id);
             if (!haveSession)
             {
-                return new HttpResponseMessage
+                return new ContentResult
                 {
-                    StatusCode = HttpStatusCode.NotFound,
-                    ReasonPhrase = $"Get-Session -Session [{id}] = NotFound"
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Content = $"Get-Session -Session [{id}] = NotFound",
+                    ContentType = MediaTypeNames.Text.Plain
                 };
             }
 
             // return xml
-            var content = new StringContent($"{sessions[id].Dom}", Encoding.UTF8, "application/xml");
-            return new HttpResponseMessage
+            return new ContentResult
             {
-                StatusCode = HttpStatusCode.OK,
-                Content = content
+                StatusCode = StatusCodes.Status200OK,
+                Content = $"{sessions[id].Dom}",
+                ContentType = MediaTypeNames.Application.Xml
             };
         }
 
@@ -80,7 +56,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/status")]
         [Route("status")]
         [HttpGet]
-        public IHttpActionResult Status()
+        public IActionResult Status()
         {
             // setup conditions
             var isFull = sessions.Count > 0;
@@ -91,7 +67,7 @@ namespace UiaDriverServer.Controllers
                 : "No sessions in stack, can create new session";
 
             // compose status
-            return Json(new { Ready = !isFull, Message = message }, jsonSettings);
+            return Ok(new { Ready = !isFull, Message = message });
         }
 
         // GET wd/hub/status
@@ -99,7 +75,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/shutdown")]
         [Route("shutdown")]
         [HttpGet]
-        public IHttpActionResult Shutdown()
+        public IActionResult Shutdown()
         {
             Exit();
             return Ok();
@@ -110,11 +86,8 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session")]
         [Route("session")]
         [HttpPost]
-        public IHttpActionResult Session([FromBody] object dto)
+        public IActionResult Session([FromBody] Capabilities capabilities)
         {
-            // evaluate capabilities
-            var capabilities = ((JToken)dto).ToObject<Capabilities>();
-
             // evaluate
             var eval = Evaluate(capabilities, out bool passed);
             if (!passed)
@@ -134,7 +107,10 @@ namespace UiaDriverServer.Controllers
             // exit conditions
             if (process.MainWindowHandle == default)
             {
-                return InternalServerError();
+                return new ContentResult
+                {
+                    StatusCode = 500
+                };
             }
 
             // compose session
@@ -157,7 +133,7 @@ namespace UiaDriverServer.Controllers
             Trace.TraceInformation(message);
 
             // set response
-            return Json(new { Value = session }, jsonSettings);
+            return Ok(new { Value = session });
         }
 
         // POST wd/hub/session/[id]
@@ -165,7 +141,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session/{id}")]
         [Route("session/{id}")]
         [HttpDelete]
-        public IHttpActionResult Delete(string id)
+        public IActionResult Delete(string id)
         {
             // get session
             var session = GetSession(id);
@@ -186,7 +162,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session/{id}/window/maximize")]
         [Route("session/{id}/window/maximize")]
         [HttpPost]
-        public IHttpActionResult Maximize(string id)
+        public IActionResult Maximize(string id)
         {
             // get session
             var session = GetSession(id);
@@ -202,7 +178,7 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        private IHttpActionResult Evaluate(Capabilities capabilities, out bool passed)
+        private IActionResult Evaluate(Capabilities capabilities, out bool passed)
         {
             // shortcuts
             var c = capabilities.DesiredCapabilities;
@@ -212,31 +188,46 @@ namespace UiaDriverServer.Controllers
             if (!c.ContainsKey(UiaCapability.Application))
             {
                 var exception = Get(UiaCapability.Application);
-                return InternalServerError(exception);
+                return new ContentResult
+                {
+                    Content = exception.Message,
+                    ContentType = MediaTypeNames.Text.Plain,
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
             }
             if (!c.ContainsKey(UiaCapability.PlatformName))
             {
                 var exception = Get(UiaCapability.PlatformName);
-                return InternalServerError(exception);
+                return new ContentResult
+                {
+                    Content = exception.Message,
+                    ContentType = MediaTypeNames.Text.Plain,
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
             }
             if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
             {
                 var exception =
                     new ArgumentException("Platform name must be 'windows'", nameof(capabilities));
-                return InternalServerError(exception);
+                return new ContentResult
+                {
+                    Content = exception.Message,
+                    ContentType = MediaTypeNames.Text.Plain,
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
             }
             passed = true;
             return Ok();
         }
 
-        private ArgumentException Get(string capabilities)
+        private static ArgumentException Get(string capabilities)
         {
             const string m = "You must provide [{0}] capability";
             var message = string.Format(m, capabilities);
             return new ArgumentException(message, nameof(capabilities));
         }
 
-        private Process Get(string app, string args)
+        private static Process Get(string app, string args)
         {
             // initialize notepad process
             var process = new Process
@@ -248,49 +239,11 @@ namespace UiaDriverServer.Controllers
             return process;
         }
 
-        private void Exit() => Task.Run(() =>
+        private static void Exit() => Task.Run(() =>
         {
             Trace.TraceInformation("Shutting down...");
             Thread.Sleep(1000);
             Environment.Exit(0);
         });
-
-        // loads the current connector-feature
-        private void LoadFeatures(Capabilities c, string feature)
-        {
-            // constants: logging
-            const string M1 = "you are not allowed to use [{0}] feature, please contact customers support at gravity.customer-services@outlook.com";
-            const string M2 = "you must provide [gUser] & [gPassword] capabilities";
-
-            // constants            
-            const StringComparison COMPARE = StringComparison.OrdinalIgnoreCase;
-            const string USER = "gUser";
-            const string PASSWORD = "gPassword";
-
-            // setup conditions
-            var isUser = c.DesiredCapabilities.ContainsKey(USER);
-            var isPassword = c.DesiredCapabilities.ContainsKey(PASSWORD);
-            var isComplient = isUser && isPassword;
-
-            // exit conditions
-            if (!isComplient)
-            {
-                throw new NotSupportedException(M2);
-            }
-
-            // shortcut           
-            var u = $"{c.DesiredCapabilities[USER]}";
-            var p = $"{c.DesiredCapabilities[PASSWORD]}";
-
-            // set conditions
-            var isAllowed = Account.GetFeatures(u, p).Any(f => f.Equals(feature, COMPARE));
-            if (isAllowed)
-            {
-                return;
-            }
-
-            // terminate connector
-            throw new NotSupportedException(string.Format(M1, feature));
-        }
     }
 }
