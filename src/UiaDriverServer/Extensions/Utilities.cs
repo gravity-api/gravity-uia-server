@@ -1,13 +1,10 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 using UIAutomationClient;
@@ -37,28 +34,19 @@ namespace UiaDriverServer.Extensions
                 }
                 throw new KeyNotFoundException("local IPvP address not found");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return string.Empty;
             }
         }
 
         /// <summary>
-        /// gets the json response settings and formatting
-        /// </summary>
-        /// <returns>settings for Newtonsoft.Json.JsonSerializer object</returns>
-        public static JsonSerializerSettings GetJsonSettings() => new()
-        {
-            Formatting = Formatting.Indented,
-            ContractResolver = new CamelCasePropertyNamesContractResolver()
-        };
-
-        /// <summary>
         /// get element runtime-id based on it's COM runtime property
         /// </summary>
         /// <param name="domRuntime"></param>
         /// <returns>automation element runtime id</returns>
-        public static int[] GetRuntime(string domRuntime) => JArray.Parse(domRuntime).ToObject<int[]>();
+        public static IEnumerable<int> GetRuntime(string domRuntime)
+            => JsonSerializer.Deserialize<IEnumerable<int>>(domRuntime);
 
         /// <summary>
         /// create global cache request for elements properties

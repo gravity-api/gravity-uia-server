@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net48</TargetFrameworks>
+    <TargetFrameworks>net5.0</TargetFrameworks>
     <Title>Selenium.WebDriver.Uia</Title>
     <Authors>Roei.Sabag</Authors>
     <PackageTags>automation,crawling,crawl,selenium,appium,automation testing,automation test,qa,gravity,gravity api</PackageTags>
@@ -17,6 +17,5 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Selenium.Support" Version="3.141.0" />
-   <!-- <PackageReference Include="Selenium.Support" Version="3.141.0" />-->
   </ItemGroup>
 </Project>

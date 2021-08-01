@@ -19,8 +19,6 @@
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.findfirst?view=netframework-4.7.2
  * https://docs.microsoft.com/en-us/dotnet/api/system.xml.linq.xdocument?view=netframework-4.7.2
  */
-using Newtonsoft.Json;
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -30,6 +28,7 @@ using System.Xml.Linq;
 using UIAutomationClient;
 using UiaDriverServer.Dto;
 using UiaDriverServer.Extensions;
+using System.Text.Json;
 
 namespace UiaDriverServer.Components
 {
@@ -101,7 +100,7 @@ namespace UiaDriverServer.Components
             // load attributes
             var attributes = element.GetAttributes();
             var runtime = element.GetRuntimeId().OfType<int>();
-            var id = JsonConvert.SerializeObject(runtime);
+            var id = JsonSerializer.Serialize(runtime);
             attributes.Add("id", id);
 
             // initialize xml row

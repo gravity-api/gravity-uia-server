@@ -1,35 +1,26 @@
-﻿/*
- * CHANGE LOG - keep only last 5 threads
- * 
- * 2019-02-07
- *    - modify: better xml comments & document reference
- *    - modify: add GetSession method
- *    - modify: add GetSssionsMap method
- */
-using Newtonsoft.Json;
+﻿using Microsoft.AspNetCore.Mvc;
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Web.Http;
+using System.Text.Json;
 
-using UiaDriverServer.Components;
 using UiaDriverServer.Dto;
-using UiaDriverServer.Extensions;
 
 namespace UiaDriverServer.Controllers
 {
-    /// <summary>
-    /// base class for all web-driver controllers (holds controllers state)
-    /// </summary>
-    public abstract class UiaController : ApiController
+    // TODO: migrate to DI container with mananged object and remove inherit.
+    public abstract class UiaController : ControllerBase
     {
         // members: state
         internal static readonly IDictionary<string, Session> sessions = new ConcurrentDictionary<string, Session>();
-        internal readonly JsonSerializerSettings jsonSettings;
+        internal readonly JsonSerializerOptions jsonSettings;
 
         protected UiaController()
         {
-            jsonSettings = Utilities.GetJsonSettings();
+            jsonSettings = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
         }
 
         /// <summary>
@@ -37,7 +28,7 @@ namespace UiaDriverServer.Controllers
         /// </summary>
         /// <param name="id">session-id</param>
         /// <returns>session information object</returns>
-        internal Session GetSession(string id)
+        internal static Session GetSession(string id)
         {
             if (!sessions.ContainsKey(id))
             {
@@ -52,7 +43,7 @@ namespace UiaDriverServer.Controllers
         /// <param name="session">session to get the element from</param>
         /// <param name="id">element-id</param>
         /// <returns>element information object</returns>
-        internal Element GetElement(Session session, string id)
+        internal static Element GetElement(Session session, string id)
         {
             if (!session.Elements.ContainsKey(id))
             {

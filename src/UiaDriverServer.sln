@@ -10,8 +10,14 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaDriverServer", "UiaDriverServer\UiaDriverServer.csproj", "{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{E690D8DE-6E65-4610-9A77-E764B0CD42AB}"
+	ProjectSection(SolutionItems) = preProject
+		..\build\azure_pipelines.yaml = ..\build\azure_pipelines.yaml
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{CCDCA6D9-A6C0-4DF6-AA64-C8257D651C0D}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
