@@ -29,6 +29,7 @@ using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
 using UiaDriverServer.Dto;
+using System.Text.Json;
 
 namespace UiaDriverServer.Extensions
 {
@@ -122,7 +123,7 @@ namespace UiaDriverServer.Extensions
 
             // setup conditions
             var isKey = session.Capabilities.ContainsKey(DevMode);
-            var isDev = isKey && (bool)session.Capabilities[DevMode];
+            var isDev = isKey && ((JsonElement)session.Capabilities[DevMode]).GetBoolean();
 
             // invoke
             return InvokeRefreshDom(session, isDev);
@@ -506,6 +507,28 @@ namespace UiaDriverServer.Extensions
         public static IEnumerable<int> GetPatterns(this IUIAutomationElement element)
         {
             return InvokeGetPatterns(element);
+        }
+
+        /// <summary>
+        /// Gets a flat (x, y) clickable point (//cords[x, y]) wrapped in an Element.
+        /// </summary>
+        /// <param name="locationStrategy">LocationStrategy object to get cords from.</param>
+        /// <returns>An Element object with a flat clickable point.</returns>
+        public static Element GetFlatPointElement(this LocationStrategy locationStrategy)
+        {
+            const string P1 = @"(?i)//cords\[\d+,\d+]";
+            const string P2 = @"\[\d+,\d+]";
+
+            // setup conditions
+            var isCords = Regex.IsMatch(locationStrategy.Value, P1);
+            if (!isCords)
+            {
+                return null;
+            }
+
+            // load cords
+            var cords = JsonSerializer.Deserialize<int[]>(Regex.Match(locationStrategy.Value, P2).Value);
+            return new Element { ClickablePoint = new ClickablePoint(xpos: cords[0], ypos: cords[1]) };
         }
         #endregion
 

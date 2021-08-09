@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Xml.XPath;
 
 using UiaDriverServer.Attributes;
@@ -19,8 +17,8 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class ElementController : UiaController
     {
-        // POST wd/hub/session/[id]/element
-        // POST session/[id]/element
+        // POST wd/hub/session/{session}/element
+        // POST session/{session}/element
         [Route("wd/hub/session/{s}/element")]
         [Route("session/{s}/element")]
         [HttpPost]
@@ -34,7 +32,7 @@ namespace UiaDriverServer.Controllers
             }
 
             // flat point element (element map by x, y for not discoverable element or flat action)
-            var e = GetFlatPointElement(locationStrategy);
+            var e = locationStrategy.GetFlatPointElement();
             if (e != null)
             {
                 // update state
@@ -47,7 +45,7 @@ namespace UiaDriverServer.Controllers
             }
 
             // parse runtime-id
-            var domRuntime = GetDomRuntime(session, locationStrategy);
+            var domRuntime = session.GetRuntime(locationStrategy);
             if (domRuntime == null)
             {
                 return NotFound();
@@ -55,7 +53,7 @@ namespace UiaDriverServer.Controllers
 
             // get element
             var dElement = session.Dom.XPathSelectElement($"//*[@id='{domRuntime}']");
-            var aElement = Get(session, domRuntime);
+            var aElement = session.GetElementById(domRuntime);
 
             // update state
             session.Elements[domRuntime] = new Element
@@ -69,8 +67,8 @@ namespace UiaDriverServer.Controllers
             return Ok(new { Value = value });
         }
 
-        // GET wd/hub/session/{session id}/element/{element id}/text
-        // GET /session/[id]/element/[id]/text
+        // GET wd/hub/session/{session}/element/{element}/text
+        // GET /session/{session}/element/{element}/text
         [Route("wd/hub/session/{s}/element/{e}/text")]
         [Route("session/{s}/element/{e}/text")]
         [HttpGet]
@@ -120,49 +118,6 @@ namespace UiaDriverServer.Controllers
             var instance = Activator.CreateInstance(method.DeclaringType);
             var text = method.Invoke(instance, new object[] { pattern });
             return Ok(new { Value = text });
-        }
-
-        private static Element GetFlatPointElement(LocationStrategy locationStrategy)
-        {
-            const string P1 = @"(?i)//cords\[\d+,\d+]";
-            const string P2 = @"\[\d+,\d+]";
-
-            // setup conditions
-            var isCords = Regex.IsMatch(locationStrategy.Value, P1);
-            if (!isCords)
-            {
-                return null;
-            }
-
-            // load cords
-            var cords = JsonSerializer.Deserialize<int[]>(Regex.Match(locationStrategy.Value, P2).Value);
-            return new Element { ClickablePoint = new ClickablePoint(xpos: cords[0], ypos: cords[1]) };
-        }
-
-        private static string GetDomRuntime(Session session, LocationStrategy locationStrategy)
-        {
-            var domElement = session.Dom.XPathSelectElement(locationStrategy.Value);
-            return domElement?.Attribute("id").Value;
-        }
-
-        private static IUIAutomationElement Get(Session session, string domRuntime)
-        {
-            // get container
-            var containerElement = session.GetApplicationRoot();
-
-            // create finding condition
-            var c = GetRuntimeCondition(session, domRuntime);
-            return containerElement.FindFirst(TreeScope.TreeScope_Descendants, c);
-        }
-
-        private static IUIAutomationCondition GetRuntimeCondition(Session session, string domRuntime)
-        {
-            // shortcuts
-            var runtime = Utilities.GetRuntime(domRuntime).ToArray();
-            const int pid = UIA_PropertyIds.UIA_RuntimeIdPropertyId;
-
-            // get condition
-            return session.Automation.CreatePropertyCondition(pid, runtime);
         }
     }
 }

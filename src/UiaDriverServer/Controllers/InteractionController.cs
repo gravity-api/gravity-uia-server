@@ -13,8 +13,8 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class InteractionController : UiaController
     {
-        // POST wd/hub/session/[s]/element/[e]/value
-        // POST session/[s]/element/[e]/value
+        // POST wd/hub/session/{session}/element/{element}/value
+        // POST session/{session}/element/{element}/value
         [Route("wd/hub/session/{s}/element/{e}/value")]
         [Route("session/{s}/element/{e}/value")]
         [HttpPost]
@@ -38,8 +38,8 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        // POST wd/hub/session/[s]/element/[e]/click
-        // POST session/[s]/element/[e]/click
+        // POST wd/hub/session/{session}/element/{element}/click
+        // POST session/{session}/element/{element}/click
         [Route("wd/hub/session/{s}/element/{e}/click")]
         [Route("session/{s}/element/{e}/click")]
         [HttpPost]
@@ -59,8 +59,8 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        // POST wd/hub/session/[s]/element/[e]/select
-        // POST session/[s]/element/[e]/select
+        // POST wd/hub/session/{session}/element/{element}/select
+        // POST session/{session}/element/{element}/select
         [Route("wd/hub/session/{s}/element/{e}/select")]
         [Route("session/{s}/element/{e}/select")]
         [HttpPost]
@@ -80,8 +80,8 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        // POST wd/hub/session/[s]/native/mouse/move
-        // POST session/[s]/native/mouse/move
+        // POST wd/hub/session/{session}/native/mouse/move
+        // POST session/{session}/native/mouse/move
         [Route("wd/hub/session/{s}/native/mouse/move")]
         [Route("session/{s}/native/mouse/move")]
         [HttpPost]
@@ -100,8 +100,8 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        // POST wd/hub/session/[s]/element/[e]/native/click
-        // POST session/[s]/element/[e]/native/click
+        // POST wd/hub/session/{session}/element/{element}/native/click
+        // POST session/{session}/element/{element}/native/click
         [Route("wd/hub/session/{s}/element/{e}/native/click")]
         [Route("session/{s}/element/{e}/native/click")]
         [HttpPost]
@@ -121,8 +121,8 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        // POST wd/hub/session/[s]/element/[e]/native/copy
-        // POST session/[s]/element/[e]/native/copy
+        // POST wd/hub/session/{session}/element/{element}/native/copy
+        // POST session/{session}/element/{element}/native/copy
         [Route("wd/hub/session/{s}/element/{e}/native/copy")]
         [Route("session/{s}/element/{e}/native/copy")]
         [HttpPost]
@@ -156,8 +156,8 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
-        // POST wd/hub/session/[s]/native/paste
-        // POST session/[s]/native/paste
+        // POST wd/hub/session/{session}/native/paste
+        // POST session/{session}/native/paste
         [Route("wd/hub/session/{s}/native/paste")]
         [Route("session/{s}/native/paste")]
         [HttpPost]
