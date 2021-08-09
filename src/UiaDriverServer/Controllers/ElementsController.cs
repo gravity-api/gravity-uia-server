@@ -158,7 +158,7 @@ namespace UiaDriverServer.Controllers
         private static IUIAutomationCondition GetRuntimeCondition(Session session, string domRuntime)
         {
             // shortcuts
-            var runtime = Utilities.GetRuntime(domRuntime);
+            var runtime = Utilities.GetRuntime(domRuntime).ToArray();
             const int pid = UIA_PropertyIds.UIA_RuntimeIdPropertyId;
 
             // get condition
