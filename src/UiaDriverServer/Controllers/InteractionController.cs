@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
@@ -85,7 +86,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session/{s}/native/mouse/move")]
         [Route("session/{s}/native/mouse/move")]
         [HttpPost]
-        public IActionResult SetMousePosition(string s, [FromBody] IDictionary<string, object> data)
+        public IActionResult SetMousePosition(string s, [FromBody]IDictionary<string, object> data)
         {
             // load action information
             var session = GetSession(s);
@@ -191,9 +192,33 @@ namespace UiaDriverServer.Controllers
             return Ok();
         }
 
+        // POST wd/hub/session/{session}/native/inputs
+        // POST session/{session}/native/inputs
+        [Route("wd/hub/session/{s}/native/inputs")]
+        [Route("session/{s}/native/inputs")]
+        [HttpPost]
+        public IActionResult InvokeKeyboardInputs(string s, [FromBody] IDictionary<string, object> data)
+        {
+            // setup
+            var wScans = JsonSerializer.Deserialize<ushort[]>($"{data["wScans"]}");
+            var session = GetSession(s);
+
+            // invoke (one by one)
+            foreach (var wScan in wScans)
+            {
+                var down = GetKeyboardInput(wScan, KeyEventF.KeyDown | KeyEventF.Scancode);
+                var up = GetKeyboardInput(wScan, KeyEventF.KeyUp | KeyEventF.Scancode);
+                session.Automation.SendInput(new[] { down, up });
+            }
+
+            // get
+            return Ok();
+        }
+
         // Utilities
         [DllImport("user32.dll")]
         private static extern IntPtr GetMessageExtraInfo();
+
         private static Input GetKeyboardInput(ushort wScan, KeyEventF flags) => new()
         {
             type = (int)InputType.Keyboard,

@@ -61,7 +61,20 @@ namespace UiaDriverServer.Components
         /// <returns>virtual DOM</returns>
         public XDocument Create()
         {
-            var element = session.GetApplicationRoot();
+            return InvokeCreate(session.GetApplicationRoot());
+        }
+
+        /// <summary>
+        /// create virtual DOM for the current application
+        /// </summary>
+        /// <returns>virtual DOM</returns>
+        public XDocument Create(IUIAutomationElement element)
+        {
+            return InvokeCreate(element);
+        }
+
+        private XDocument InvokeCreate(IUIAutomationElement element)
+        {
             GenerateDOM(element);
             var xdocument = $"<root>{domWriter}</root>";
             return XDocument.Parse(xdocument);

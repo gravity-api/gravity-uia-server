@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 using UIAutomationClient;
 
@@ -112,5 +115,32 @@ namespace UiaDriverServer.Extensions
             }
             return string.Empty;
         }
+
+        /// <summary>
+        /// start an interactive process.
+        /// </summary>
+        /// <param name="fileName">The application or document to start.</param>
+        /// <param name="arguments">The set of command-line arguments to use when starting the application.</param>
+        /// <returns>A new instance of the <see cref="Process"/> class.</returns>
+        public static Process StartProcess(string fileName, string arguments)
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo { FileName = fileName, Arguments = arguments }
+            };
+            process.Start();
+            process.WaitForInputIdle();
+            return process;
+        }
+
+        /// <summary>
+        /// Close the driver with exit code 0.
+        /// </summary>
+        public static void CloseDriver() => Task.Run(() =>
+        {
+            Trace.TraceInformation("Shutting down...");
+            Thread.Sleep(1000);
+            Environment.Exit(0);
+        });
     }
 }

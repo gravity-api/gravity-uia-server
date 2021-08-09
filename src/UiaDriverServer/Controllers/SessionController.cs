@@ -2,11 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 using UiaDriverServer.Components;
 using UiaDriverServer.Dto;
@@ -77,7 +77,7 @@ namespace UiaDriverServer.Controllers
         [HttpGet]
         public IActionResult Shutdown()
         {
-            Exit();
+            Utilities.CloseDriver();
             return Ok();
         }
 
@@ -86,23 +86,24 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session")]
         [Route("session")]
         [HttpPost]
-        public IActionResult Session([FromBody] Capabilities capabilities)
+        public IActionResult Session([FromBody]Capabilities capabilities)
         {
-            // evaluate
-            var eval = Evaluate(capabilities, out bool passed);
-            if (!passed)
+            // internal server error
+            var (response, assertion) = capabilities.AssertCapabilities();
+            if (!assertion)
             {
-                return eval;
+                return response;
             }
 
+            // setup
+            var caps = capabilities.DesiredCapabilities;
+
             // get session initialization information
-            var args = string.Empty;
+            var args = caps.ContainsKey(UiaCapability.Arguments)
+                ? JsonSerializer.Deserialize<IEnumerable<string>>($"{caps[UiaCapability.Arguments]}")
+                : Array.Empty<string>();
             var executeable = $"{capabilities.DesiredCapabilities[UiaCapability.Application]}";
-            if (capabilities.DesiredCapabilities.ContainsKey(UiaCapability.Arguments))
-            {
-                args = $"{capabilities.DesiredCapabilities[UiaCapability.Arguments]}";
-            }
-            var process = Get(executeable, args).WaitForHandle(TimeSpan.FromSeconds(60));
+            var process = Utilities.StartProcess(executeable, string.Join(" ", args)).WaitForHandle(TimeSpan.FromSeconds(60));
 
             // exit conditions
             if (process.MainWindowHandle == default)
@@ -129,7 +130,9 @@ namespace UiaDriverServer.Controllers
             sessions[session.SessionId] = session;
 
             // put to screen
-            var message = $"Create-Session -Session {session.SessionId} -Application {session.Application.StartInfo.FileName} = Created";
+            var message = $"Create-Session " +
+                $"-Session {session.SessionId} " +
+                $"-Application {session.Application.StartInfo.FileName} = Created";
             Trace.TraceInformation(message);
 
             // set response
@@ -177,73 +180,5 @@ namespace UiaDriverServer.Controllers
             // get
             return Ok();
         }
-
-        private IActionResult Evaluate(Capabilities capabilities, out bool passed)
-        {
-            // shortcuts
-            var c = capabilities.DesiredCapabilities;
-            passed = false;
-
-            // evaluate
-            if (!c.ContainsKey(UiaCapability.Application))
-            {
-                var exception = Get(UiaCapability.Application);
-                return new ContentResult
-                {
-                    Content = exception.Message,
-                    ContentType = MediaTypeNames.Text.Plain,
-                    StatusCode = StatusCodes.Status500InternalServerError
-                };
-            }
-            if (!c.ContainsKey(UiaCapability.PlatformName))
-            {
-                var exception = Get(UiaCapability.PlatformName);
-                return new ContentResult
-                {
-                    Content = exception.Message,
-                    ContentType = MediaTypeNames.Text.Plain,
-                    StatusCode = StatusCodes.Status500InternalServerError
-                };
-            }
-            if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
-            {
-                var exception =
-                    new ArgumentException("Platform name must be 'windows'", nameof(capabilities));
-                return new ContentResult
-                {
-                    Content = exception.Message,
-                    ContentType = MediaTypeNames.Text.Plain,
-                    StatusCode = StatusCodes.Status500InternalServerError
-                };
-            }
-            passed = true;
-            return Ok();
-        }
-
-        private static ArgumentException Get(string capabilities)
-        {
-            const string m = "You must provide [{0}] capability";
-            var message = string.Format(m, capabilities);
-            return new ArgumentException(message, nameof(capabilities));
-        }
-
-        private static Process Get(string app, string args)
-        {
-            // initialize notepad process
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo { FileName = app, Arguments = args }
-            };
-            process.Start();
-            process.WaitForInputIdle();
-            return process;
-        }
-
-        private static void Exit() => Task.Run(() =>
-        {
-            Trace.TraceInformation("Shutting down...");
-            Thread.Sleep(1000);
-            Environment.Exit(0);
-        });
     }
 }

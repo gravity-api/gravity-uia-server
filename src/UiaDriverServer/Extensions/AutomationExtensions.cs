@@ -30,6 +30,10 @@ using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
 using UiaDriverServer.Dto;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using System.Net.Mime;
+using Microsoft.AspNetCore.Http;
+using System.Xml.Linq;
 
 namespace UiaDriverServer.Extensions
 {
@@ -46,17 +50,18 @@ namespace UiaDriverServer.Extensions
         [DllImport("user32.dll")]
         private static extern bool SetPhysicalCursorPos(int x, int y);
 
-        [Obsolete("This function has been superseded. Use SendInput instead.")]
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
-
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetMessageExtraInfo();
 
-        #region *** Session     ***
+        // native calls: obsolete
+        [Obsolete("This function has been superseded. Use SendInput instead.")]
+        [DllImport("user32.dll")]
+        private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+
+        #region *** Session      ***
         /// <summary>
         /// Synthesizes keystrokes, mouse motions, and button clicks.
         /// </summary>
@@ -66,7 +71,7 @@ namespace UiaDriverServer.Extensions
         /// <remarks>If the function returns zero, the input was already blocked by another thread.</remarks>
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used as 'Monkey Patch'")]
         [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "False positive on IDE0060")]
-        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 automation,  params Input[] inputs)
+        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 automation, params Input[] inputs)
         {
             // invoke
             var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
@@ -186,16 +191,47 @@ namespace UiaDriverServer.Extensions
             var containerElement = session.GetApplicationRoot();
 
             // create finding condition
-            var runtime = Utilities.GetRuntime(domRuntime);
-            const int pid = UIA_PropertyIds.UIA_RuntimeIdPropertyId;
-            var c = session.Automation.CreatePropertyCondition(pid, runtime);
+            var runtime = Utilities.GetRuntime(domRuntime).ToArray();
+            var c = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
 
             // get element
             return containerElement.FindFirst(TreeScope.TreeScope_Descendants, c);
         }
+
+        // TODO: build cache
+        /// <summary>
+        /// Gets an <see cref="IUIAutomationElement"/> from root scope (desktop).
+        /// </summary>
+        /// <param name="session">Session to search.</param>
+        /// <param name="locationStrategy"></param>
+        /// <returns>A <see cref="IUIAutomationElement"/>.</returns>
+        public static (IUIAutomationElement, XNode, string) GetFromRoot(this Session session, LocationStrategy locationStrategy)
+        {
+            // bad request
+            if (!locationStrategy.Value.StartsWith("//root"))
+            {
+                return (null, null, null);
+            }
+            locationStrategy.Value = locationStrategy.Value.Replace("//root", string.Empty);
+
+            // build
+            var dom = new DomFactory(session).Create(session.Automation.GetRootElement());
+            var domElement = dom.XPathSelectElement(locationStrategy.Value);
+            var domRuntime = domElement?.Attribute("id").Value;
+
+            // get container
+            var containerElement = session.Automation.GetRootElement();
+
+            // create finding condition
+            var runtime = Utilities.GetRuntime(domRuntime).ToArray();
+            var c = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
+
+            // get element
+            return (containerElement.FindFirst(TreeScope.TreeScope_Descendants, c), domElement, domRuntime);
+        }
         #endregion
 
-        #region *** Validation  ***
+        #region *** Validation   ***
         /// <summary>
         /// Assert if element in interactable and can accept a given text.
         /// </summary>
@@ -241,7 +277,7 @@ namespace UiaDriverServer.Extensions
         }
         #endregion
 
-        #region *** Element     ***
+        #region *** Element      ***
         /// <summary>
         /// Try to get a mouse clickable point of the element.
         /// </summary>
@@ -532,7 +568,7 @@ namespace UiaDriverServer.Extensions
         }
         #endregion
 
-        #region *** Information ***
+        #region *** Information  ***
         /// <summary>
         /// Gets the <see cref="IUIAutomationElement"/> information as a collection of key/value.
         /// </summary>
@@ -580,6 +616,52 @@ namespace UiaDriverServer.Extensions
             ["Orientation".ToCamelCase()] = $"{info.CurrentOrientation}",
             ["ProcessId".ToCamelCase()] = $"{info.CurrentProcessId}"
         };
+        #endregion
+
+        #region *** Capabilities ***
+        /// <summary>
+        /// Assert if the capabilities are compliant with UiA Driver.
+        /// </summary>
+        /// <param name="capabilities">The capabilites to assert.</param>
+        /// <returns><see cref="true"/> if compliant; <see cref="false"/> if not.</returns>
+        public static (IActionResult Response, bool Result) AssertCapabilities(this Capabilities capabilities)
+        {
+            // setup
+            const string message = "You must provide [{0}] capability";
+            var response = new ContentResult
+            {
+                ContentType = MediaTypeNames.Text.Plain,
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+
+            // shortcuts
+            var c = capabilities.DesiredCapabilities;
+
+            // evaluate
+            if (!c.ContainsKey(UiaCapability.Application))
+            {
+                response.Content = string.Format(message, UiaCapability.Application);
+                return (response, false);
+            }
+            if (!c.ContainsKey(UiaCapability.PlatformName))
+            {
+                response.Content = string.Format(message, UiaCapability.PlatformName);
+                return (response, false);
+            }
+            if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
+            {
+                response.Content = "Platform name must be 'windows'";
+                return (response, false);
+            }
+
+            // setup
+            response.StatusCode = StatusCodes.Status200OK;
+            response.Content = string.Empty;
+            response.ContentType = MediaTypeNames.Application.Json;
+
+            // get
+            return (response, true); 
+        }
         #endregion
 
         // Utilities

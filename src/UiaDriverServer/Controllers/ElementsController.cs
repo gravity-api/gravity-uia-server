@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Xml.Linq;
 using System.Xml.XPath;
 
 using UiaDriverServer.Attributes;
@@ -44,6 +45,14 @@ namespace UiaDriverServer.Controllers
                 return Ok(new { Value = v });
             }
 
+            // root
+            var (element, node, runtime) = session.GetFromRoot(locationStrategy);
+            if (element != null && node != null)
+            {
+                // get
+                return Get(session, runtime, element, node);
+            }
+
             // parse runtime-id
             var domRuntime = session.GetRuntime(locationStrategy);
             if (domRuntime == null)
@@ -52,14 +61,20 @@ namespace UiaDriverServer.Controllers
             }
 
             // get element
-            var dElement = session.Dom.XPathSelectElement($"//*[@id='{domRuntime}']");
-            var aElement = session.GetElementById(domRuntime);
+            element = session.GetElementById(domRuntime);
+            node = session.Dom.XPathSelectElement($"//*[@id='{domRuntime}']");
 
+            // get
+            return Get(session, domRuntime, element, node);
+        }
+
+        private IActionResult Get(Session session, string domRuntime, IUIAutomationElement element, XNode node)
+        {
             // update state
             session.Elements[domRuntime] = new Element
             {
-                UIAutomationElement = aElement,
-                Node = dElement
+                UIAutomationElement = element,
+                Node = node
             };
 
             // value response
