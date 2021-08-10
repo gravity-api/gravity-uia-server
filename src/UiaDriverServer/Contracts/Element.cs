@@ -2,7 +2,7 @@
 using System.Xml.Linq;
 using UIAutomationClient;
 
-namespace UiaDriverServer.Dto
+namespace UiaDriverServer.Contracts
 {
     internal class Element
     {

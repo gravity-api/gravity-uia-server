@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace UiaDriverServer.Dto
+namespace UiaDriverServer.Contracts
 {
     [DataContract]
     internal class Location

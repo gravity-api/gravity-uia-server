@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 
 namespace UiaDriverServer.Controllers
 {

@@ -1,4 +1,7 @@
-﻿using System;
+﻿/*
+ * CHANGE LOG - keep only last 5 threads
+ */
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -142,5 +145,27 @@ namespace UiaDriverServer.Extensions
             Thread.Sleep(1000);
             Environment.Exit(0);
         });
+
+        /// <summary>
+        /// Render UiA Driver logo.
+        /// </summary>
+        public static void RednerLogo()
+        {
+            Console.WriteLine("  ▄▄▄▄▄▄▄     ▄▄▄▄▄▄   ▄▄▄▄▄         ▄▄▄▄▄         ");
+            Console.WriteLine(" ████████     ██████  █████▀        ███████▄       ");
+            Console.WriteLine("  ██████       ████     ▄▄▄▄        ████████▄      ");
+            Console.WriteLine("  ██████       ████  ▄██████       ▄███▀██████     ");
+            Console.WriteLine("  ██████       ████   ██████      ▄███▀ ▀██████    ");
+            Console.WriteLine("  ██████       ████   ██████     ▄██████████████   ");
+            Console.WriteLine("  ███████▄   ▄▄████   ██████    ▄███▀▀▀▀▀▀▀██████  ");
+            Console.WriteLine("   ▀█████████████▀   ████████ ████████   ██████████");
+            Console.WriteLine("      ▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀ ");
+            Console.WriteLine(" WebDriver implementation for Windows native.      ");
+            Console.WriteLine();
+            Console.WriteLine(" Powered by IUIAutomation: https://docs.microsoft.com/en-us/windows/win32/api/_winauto/");
+            Console.WriteLine(" GitHub Project URL:       https://github.com/gravity-api/gravity-uia-server");
+            Console.WriteLine();
+            Console.WriteLine();
+        }
     }
 }

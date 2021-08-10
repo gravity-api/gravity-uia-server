@@ -1,4 +1,7 @@
-﻿using System;
+﻿/*
+ * CHANGE LOG - keep only last 5 threads
+ */
+using System;
 using System.Diagnostics;
 using System.Threading;
 

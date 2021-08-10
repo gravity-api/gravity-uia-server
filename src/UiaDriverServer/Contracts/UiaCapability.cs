@@ -1,4 +1,4 @@
-﻿namespace UiaDriverServer.Dto
+﻿namespace UiaDriverServer.Contracts
 {
     internal static class UiaCapability
     {

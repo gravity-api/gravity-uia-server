@@ -28,7 +28,7 @@ using UiaDriverServer.Extensions;
 
 using UIAutomationClient;
 
-namespace UiaDriverServer.Dto
+namespace UiaDriverServer.Contracts
 {
     internal class Session
     {

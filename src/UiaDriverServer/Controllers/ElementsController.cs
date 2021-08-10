@@ -8,7 +8,7 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 
 using UiaDriverServer.Attributes;
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
 
 using UIAutomationClient;

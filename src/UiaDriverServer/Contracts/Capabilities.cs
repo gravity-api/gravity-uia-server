@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace UiaDriverServer.Dto
+namespace UiaDriverServer.Contracts
 {
     /// <summary>
     /// class to create the capabilities of the browser you require for IWebDriver

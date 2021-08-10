@@ -26,7 +26,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using UIAutomationClient;
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
 using System.Text.Json;
 

@@ -14,26 +14,26 @@
  * codemag.com
  * https://www.codemag.com/article/0810122/Creating-UI-Automation-Client-Applications
  */
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.Mime;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using System.Xml.XPath;
-
-using UIAutomationClient;
 
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
-using UiaDriverServer.Dto;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
-using System.Net.Mime;
-using Microsoft.AspNetCore.Http;
-using System.Xml.Linq;
+
+using UIAutomationClient;
 
 namespace UiaDriverServer.Extensions
 {
@@ -155,7 +155,7 @@ namespace UiaDriverServer.Extensions
 
             // setup
             var dom = new DomFactory(session).Create();
-            
+
             // not created
             if (dom == null)
             {
@@ -660,7 +660,7 @@ namespace UiaDriverServer.Extensions
             response.ContentType = MediaTypeNames.Application.Json;
 
             // get
-            return (response, true); 
+            return (response, true);
         }
         #endregion
 

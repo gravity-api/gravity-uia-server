@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 
 using UiaDriverServer.Components;
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
 
 using UIAutomationClient;
@@ -134,6 +134,7 @@ namespace UiaDriverServer.Controllers
                 $"-Session {session.SessionId} " +
                 $"-Application {session.Application.StartInfo.FileName} = Created";
             Trace.TraceInformation(message);
+            Trace.TraceInformation($"Get-VirtualDom = /session/{session.SessionId}");
 
             // set response
             return Ok(new { Value = session });

@@ -7,7 +7,7 @@
  * docs.w3c.web-driver
  * https://www.w3.org/TR/webdriver1/#locator-strategies
  */
-namespace UiaDriverServer.Dto
+namespace UiaDriverServer.Contracts
 {
     /// <summary>
     /// an enumerated attribute deciding what technique should be used to
