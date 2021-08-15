@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Management;
 using System.Net;
@@ -125,14 +126,21 @@ namespace UiaDriverServer.Extensions
         /// <param name="fileName">The application or document to start.</param>
         /// <param name="arguments">The set of command-line arguments to use when starting the application.</param>
         /// <returns>A new instance of the <see cref="Process"/> class.</returns>
-        public static Process StartProcess(string fileName, string arguments)
+        public static Process StartProcess(string fileName,  string arguments)
         {
+            // setup conditions
+            var isDirectory = Directory.Exists(fileName);
+
+            // build process
+            var startInfo = isDirectory
+                ? new ProcessStartInfo { FileName = "explorer.exe", Arguments = fileName }
+                : new ProcessStartInfo { FileName = fileName, Arguments = arguments };
+
             var process = new Process
             {
-                StartInfo = new ProcessStartInfo { FileName = fileName, Arguments = arguments }
+                StartInfo = startInfo
             };
             process.Start();
-            process.WaitForInputIdle();
             return process;
         }
 

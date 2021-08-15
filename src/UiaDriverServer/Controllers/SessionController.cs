@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -19,6 +22,13 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class SessionController : UiaController
     {
+        private readonly ILogger<SessionController> logger;
+
+        public SessionController(ILogger<SessionController> logger)
+        {
+            this.logger = logger;
+        }
+
         // native iterop       
         [DllImport("user32.dll")]
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -103,10 +113,10 @@ namespace UiaDriverServer.Controllers
                 ? JsonSerializer.Deserialize<IEnumerable<string>>($"{caps[UiaCapability.Arguments]}")
                 : Array.Empty<string>();
             var executeable = $"{capabilities.DesiredCapabilities[UiaCapability.Application]}";
-            var process = Utilities.StartProcess(executeable, string.Join(" ", args)).WaitForHandle(TimeSpan.FromSeconds(60));
+            var process = Utilities.StartProcess(executeable, string.Join(" ", args));
 
             // exit conditions
-            if (process.MainWindowHandle == default)
+            if (process.MainWindowHandle == default && process.Handle == default && (process.SafeHandle.IsInvalid || process.SafeHandle.IsClosed))
             {
                 return new ContentResult
                 {
@@ -115,10 +125,13 @@ namespace UiaDriverServer.Controllers
             }
 
             // compose session
-            var session = new Session(new CUIAutomation8())
+            var treeScope = caps.ContainsKey(UiaCapability.TreeScope)
+                ? (TreeScope)((JsonElement) caps[UiaCapability.TreeScope]).GetInt32()
+                : TreeScope.TreeScope_Descendants;
+            var session = new Session(new CUIAutomation8(), process)
             {
-                Application = process,
-                Capabilities = capabilities.DesiredCapabilities
+                Capabilities = capabilities.DesiredCapabilities,
+                TreeScope = treeScope
             };
 
             // generate virtual DOM
@@ -126,15 +139,15 @@ namespace UiaDriverServer.Controllers
 
             // apply session
             session.Dom = domFactory.Create();
-            session.SessionId = $"{process.MainWindowHandle}";
+            session.SessionId = process.MainWindowHandle == default ? $"{process.Handle}" : $"{process.MainWindowHandle}";
             sessions[session.SessionId] = session;
 
             // put to screen
             var message = $"Create-Session " +
                 $"-Session {session.SessionId} " +
                 $"-Application {session.Application.StartInfo.FileName} = Created";
-            Trace.TraceInformation(message);
-            Trace.TraceInformation($"Get-VirtualDom = /session/{session.SessionId}");
+            logger.LogInformation(message);
+            logger.LogInformation($"Get-VirtualDom = /session/{session.SessionId}");
 
             // set response
             return Ok(new { Value = session });

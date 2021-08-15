@@ -92,8 +92,7 @@ namespace UiaDriverServer.Components
             domWriter.Append('<').Append(tagName).Append(' ').Append(attributes).AppendLine("> ");
 
             // exit routine
-            const TreeScope scope = TreeScope.TreeScope_Children;
-            var elements = element.FindAll(scope, allCondition);
+            var elements = element.FindAll(session.TreeScope, allCondition);
             if (elements.Length == 0)
             {
                 domWriter.Append("</").Append(tagName).AppendLine(">");

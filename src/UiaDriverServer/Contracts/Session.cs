@@ -28,13 +28,19 @@ using UiaDriverServer.Extensions;
 
 using UIAutomationClient;
 
+// TODO: fix all cross references and spaghetti code.
 namespace UiaDriverServer.Contracts
 {
     internal class Session
     {
         public Session(CUIAutomation8 automation)
+            :this(automation, default)
+        { }
+        
+        public Session(CUIAutomation8 automation, Process application)
         {
             Automation = automation;
+            Application = application;
             Elements = new ConcurrentDictionary<string, Element>();
             ScreenResolution = Utilities.GetScreenResultion();
         }
@@ -44,6 +50,8 @@ namespace UiaDriverServer.Contracts
         /// </summary>
         public string SessionId { get; set; }
 
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
+
         /// <summary>
         /// response value data (holds all capabilities settings)
         /// </summary>
@@ -52,12 +60,7 @@ namespace UiaDriverServer.Contracts
         /// <summary>
         /// gets the current application run-time id
         /// </summary>
-        public int[] Runtime { get; private set; }
-
-        /// <summary>
-        /// Gets the value indicates if this session is native or not.
-        /// </summary>
-        public bool IsNative => GetIsNative();
+        public IEnumerable<int> Runtime { get; set; }
 
         /// <summary>
         /// Gets the primary screen Width and Height.
@@ -68,97 +71,30 @@ namespace UiaDriverServer.Contracts
         /// the application which is under the current session
         /// </summary>
         [JsonIgnore]
-        internal Process Application { get; set; }
+        public Process Application { get; set; }
 
         /// <summary>
         /// the DOM of the application which is under the current session
         /// </summary>
         [JsonIgnore]
-        internal XDocument Dom { get; set; }
+        public XDocument Dom { get; set; }
 
         /// <summary>
         /// gets or sets a collection of cached elements across a given session
         /// </summary>
         [JsonIgnore]
-        internal IDictionary<string, Element> Elements { get; set; }
+        public IDictionary<string, Element> Elements { get; set; }
 
         /// <summary>
         /// main automation object for this session
         /// </summary>
         [JsonIgnore]
-        internal CUIAutomation8 Automation { get; }
+        public CUIAutomation8 Automation { get; }
 
         /// <summary>
         /// contains values that specify the scope of elements within the UI Automation tree
         /// </summary>
         [JsonIgnore]
-        internal TreeScope TreeScope { get; set; } = TreeScope.TreeScope_Descendants;
-
-        // TODO: implement timeouts
-        /// <summary>
-        /// gets the application main window element
-        /// </summary>
-        /// <returns>application main window element/returns>
-        internal IUIAutomationElement GetApplicationRoot()
-        {
-            // setup            
-            var timeout = TimeSpan.FromSeconds(60);
-            var timeoutCounter = TimeSpan.Zero;
-
-            // iterate
-            while (timeoutCounter < timeout)
-            {
-                // shortcuts
-                var condition = GetCondition();
-
-                // iterate
-                var root = Automation.GetRootElement();
-                var application = root.FindFirst(TreeScope.TreeScope_Descendants, condition);
-
-                var isReady = application != null && application.CurrentNativeWindowHandle != default;
-                if (isReady)
-                {
-                    if (Runtime?.Length <= 0)
-                    {
-                        Runtime = application.GetRuntimeId().Cast<int>().ToArray();
-                    }
-                    return application;
-                }
-
-                Thread.Sleep(100);
-                timeoutCounter = timeoutCounter.Add(TimeSpan.FromMilliseconds(100));
-            }
-            return null;
-        }
-
-        private IUIAutomationCondition GetCondition()
-        {
-            // setup conditions
-            var isRuntime = Runtime?.Length > 0;
-
-            // get automation condition-id
-            var id = isRuntime
-                ? UIA_PropertyIds.UIA_RuntimeIdPropertyId
-                : UIA_PropertyIds.UIA_NativeWindowHandlePropertyId;
-
-            // get condition
-            return isRuntime
-                ? Automation.CreatePropertyCondition(id, Runtime)
-                : Automation.CreatePropertyCondition(id, Application.MainWindowHandle);
-        }
-
-        private bool GetIsNative()
-        {
-            // members
-            var key = UiaCapability.UseNativeEvents;
-            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
-
-            // setup
-            var capabilites = Capabilities;
-            var isNative = capabilites.ContainsKey(key);
-
-            // get
-            return isNative && $"{capabilites[key]}".Equals("true", Compare);
-        }
+        public TreeScope TreeScope { get; set; } = TreeScope.TreeScope_Descendants;
     }
 }

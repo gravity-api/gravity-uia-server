@@ -20,7 +20,7 @@
     "UiaDriverServer": {
       "commandName": "Project",
       "dotnetRunMessages": "true",
-      "launchBrowser": true,
+      "launchBrowser": false,
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:4445;http://localhost:4444",
       "environmentVariables": {
