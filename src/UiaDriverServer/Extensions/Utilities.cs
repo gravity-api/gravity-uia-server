@@ -141,6 +141,7 @@ namespace UiaDriverServer.Extensions
                 StartInfo = startInfo
             };
             process.Start();
+            Thread.Sleep(3000);
             return process;
         }
 

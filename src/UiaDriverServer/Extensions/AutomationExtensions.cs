@@ -1017,8 +1017,8 @@ namespace UiaDriverServer.Extensions
         private static IUIAutomationElement InvokeSelectionItem(this IUIAutomationElement element)
         {
             // get current pattern
-            var p = element.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId);
-            var pattern = (IUIAutomationSelectionItemPattern)p;
+            var p = element?.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId);
+            var pattern = p as IUIAutomationSelectionItemPattern;
 
             // invoke
             if (pattern == null)
