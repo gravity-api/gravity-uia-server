@@ -23,7 +23,7 @@ namespace UiaDriverServer.Extensions
             // iterate
             while (timeoutCounter < timeout)
             {
-                if(p.MainWindowHandle != default)
+                if (p.MainWindowHandle != default)
                 {
                     return p;
                 }
@@ -31,6 +31,18 @@ namespace UiaDriverServer.Extensions
                 timeoutCounter = timeoutCounter.Add(TimeSpan.FromMilliseconds(100));
             }
             return p;
+        }
+
+        public static string GetNameOrFile(this Process p)
+        {
+            try
+            {
+                return p.StartInfo.FileName;
+            }
+            catch (Exception e) when (e != null)
+            {
+                return p.ProcessName;
+            }
         }
     }
 }

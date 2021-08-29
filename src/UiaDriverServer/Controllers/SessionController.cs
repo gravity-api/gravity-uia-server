@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Mime;
@@ -40,25 +39,22 @@ namespace UiaDriverServer.Controllers
         [HttpGet]
         public IActionResult Dom([FromRoute] string id)
         {
-            // setup conditions
-            var haveSession = sessions.ContainsKey(id);
-            if (!haveSession)
+            // setup
+            var notFound = new ContentResult
             {
-                return new ContentResult
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Content = $"Get-Session -Session [{id}] = NotFound",
-                    ContentType = MediaTypeNames.Text.Plain
-                };
-            }
-
-            // return xml
-            return new ContentResult
+                StatusCode = StatusCodes.Status404NotFound,
+                Content = $"Get-Session -Session [{id}] = NotFound",
+                ContentType = MediaTypeNames.Text.Plain
+            };
+            var ok = new ContentResult
             {
                 StatusCode = StatusCodes.Status200OK,
                 Content = $"{sessions[id].Dom}",
                 ContentType = MediaTypeNames.Application.Xml
             };
+
+            // get
+            return sessions.ContainsKey(id) ? ok : notFound;
         }
 
         // GET wd/hub/status
@@ -108,12 +104,17 @@ namespace UiaDriverServer.Controllers
             // setup
             var caps = capabilities.DesiredCapabilities;
 
-            // get session initialization information
+            // build
             var args = caps.ContainsKey(UiaCapability.Arguments)
                 ? JsonSerializer.Deserialize<IEnumerable<string>>($"{caps[UiaCapability.Arguments]}")
                 : Array.Empty<string>();
+            var mount = caps.ContainsKey(UiaCapability.Mount) && ((JsonElement)caps[UiaCapability.Mount]).GetBoolean();
             var executeable = $"{capabilities.DesiredCapabilities[UiaCapability.Application]}";
-            var process = Utilities.StartProcess(executeable, string.Join(" ", args));
+
+            // get session
+            var process = mount
+                ? Process.GetProcesses().FirstOrDefault(i => executeable.ToUpper().Contains(i.ProcessName.ToUpper()))
+                : Utilities.StartProcess(executeable, string.Join(" ", args));
 
             // exit conditions
             if (process.MainWindowHandle == default && process.Handle == default && (process.SafeHandle.IsInvalid || process.SafeHandle.IsClosed))
@@ -145,7 +146,7 @@ namespace UiaDriverServer.Controllers
             // put to screen
             var message = $"Create-Session " +
                 $"-Session {session.SessionId} " +
-                $"-Application {session.Application.StartInfo.FileName} = Created";
+                $"-Application {session.Application.GetNameOrFile()} = Created";
             logger.LogInformation(message);
             logger.LogInformation($"Get-VirtualDom = /session/{session.SessionId}");
 

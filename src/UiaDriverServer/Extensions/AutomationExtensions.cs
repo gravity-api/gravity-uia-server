@@ -73,7 +73,7 @@ namespace UiaDriverServer.Extensions
         /// <returns>An <see cref="IUIAutomationElement"/> interface.</returns>
         public static IUIAutomationElement GetApplicationRoot(this Session session)
         {
-            return session.Application.StartInfo.FileName.Equals("explorer.exe")
+            return session.Application.GetNameOrFile().ToUpper().Contains("EXPLORER.EXE")
                 ? GetRootFromFileExplorer(session)
                 : GetRootFromApplication(session);
         }
@@ -215,11 +215,21 @@ namespace UiaDriverServer.Extensions
         /// Gets the file explorer indicator.
         /// </summary>
         /// <returns><see cref="true"/> if FileExplorer; <see cref="false"/> if not.</returns>
-        public static bool GetIsFileExplorer(this Session session) => session
-            .Application?
-            .StartInfo?
-            .FileName?
-            .Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) != false;
+        public static bool GetIsFileExplorer(this Session session)
+        {
+            try
+            {
+                return session
+                    .Application?
+                    .StartInfo?
+                    .FileName?
+                    .Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) != false;
+            }
+            catch (Exception e) when (e != null)
+            {
+                return false;
+            }
+        }
 
         /// <summary>
         /// Synthesizes keystrokes, mouse motions, and button clicks.

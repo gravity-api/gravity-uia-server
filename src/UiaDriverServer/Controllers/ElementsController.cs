@@ -18,8 +18,8 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class ElementController : UiaController
     {
-        // POST wd/hub/session/{session}/element
-        // POST session/{session}/element
+        // POST /wd/hub/session/{session}/element
+        // POST /session/{session}/element
         [Route("wd/hub/session/{s}/element")]
         [Route("session/{s}/element")]
         [HttpPost]
@@ -82,7 +82,7 @@ namespace UiaDriverServer.Controllers
             return Ok(new { Value = value });
         }
 
-        // GET wd/hub/session/{session}/element/{element}/text
+        // GET /wd/hub/session/{session}/element/{element}/text
         // GET /session/{session}/element/{element}/text
         [Route("wd/hub/session/{s}/element/{e}/text")]
         [Route("session/{s}/element/{e}/text")]
@@ -133,6 +133,27 @@ namespace UiaDriverServer.Controllers
             var instance = Activator.CreateInstance(method.DeclaringType);
             var text = method.Invoke(instance, new object[] { pattern });
             return Ok(new { Value = text });
+        }
+
+        // GET /wd/hub/session/{s}/element/{e}/attribute/{name}
+        // GET /session/{s}/element/{e}/attribute/{name}
+        [Route("wd/hub/session/{s}/element/{e}/attribute/{name}")]
+        [Route("session/{s}/element/{e}/attribute/{name}")]
+        public IActionResult Attribute(string s, string e, string name)
+        {
+            // exit conditions
+            var elementFound = GetSession(s)?.Elements?.ContainsKey(e) == true;
+            if (!elementFound)
+            {
+                return NotFound();
+            }
+
+            // setup
+            var element = GetSession(s).Elements[e].Node;
+            var attribute = XElement.Parse($"{element}").Attribute(name)?.Value;
+
+            // get
+            return Ok(new { Value = attribute });
         }
     }
 }
