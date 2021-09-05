@@ -1028,10 +1028,9 @@ namespace UiaDriverServer.Extensions
         {
             // get current pattern
             var p = element?.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId);
-            var pattern = p as IUIAutomationSelectionItemPattern;
 
             // invoke
-            if (pattern == null)
+            if (p is not IUIAutomationSelectionItemPattern pattern)
             {
                 return element;
             }
