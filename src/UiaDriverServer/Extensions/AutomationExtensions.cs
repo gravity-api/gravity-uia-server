@@ -119,9 +119,15 @@ namespace UiaDriverServer.Extensions
             // setup
             var folder = session.Application.StartInfo.Arguments;
             var folderLast = new DirectoryInfo(folder).Name;
+
+            // setup: windows - chain condition
             var windowCondition = session.Automation.CreatePropertyCondition(controlTypeProperty, controlTypeWindow);
-            var windowNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folderLast);
+            var windowPartialNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folderLast);
+            var windowFullNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folder);
+            var windowNameCondition = session.Automation.CreateOrCondition(windowFullNameCondition, windowFullNameCondition);
             var windowRootCondition = session.Automation.CreateAndCondition(windowCondition, windowNameCondition);
+
+            // setup: toolbar - chain condition
             var toolBarCondition = session.Automation.CreatePropertyCondition(controlTypeProperty, controlTypeToolBar);
 
             // collect: windows
