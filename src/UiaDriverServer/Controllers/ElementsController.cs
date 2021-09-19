@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
@@ -87,6 +88,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session/{s}/element/{e}/text")]
         [Route("session/{s}/element/{e}/text")]
         [HttpGet]
+        [SuppressMessage("Major Code Smell", "S3011:Reflection should not be used to increase accessibility of classes, methods, or fields", Justification = "As design. This method have access to internal resource.")]
         public IActionResult Text(string s, string e)
         {
             // exit conditions

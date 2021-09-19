@@ -124,7 +124,7 @@ namespace UiaDriverServer.Extensions
             var windowCondition = session.Automation.CreatePropertyCondition(controlTypeProperty, controlTypeWindow);
             var windowPartialNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folderLast);
             var windowFullNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folder);
-            var windowNameCondition = session.Automation.CreateOrCondition(windowFullNameCondition, windowFullNameCondition);
+            var windowNameCondition = session.Automation.CreateOrCondition(windowFullNameCondition, windowPartialNameCondition);
             var windowRootCondition = session.Automation.CreateAndCondition(windowCondition, windowNameCondition);
 
             // setup: toolbar - chain condition
@@ -535,15 +535,6 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
-        /// Select the element if possible.
-        /// </summary>
-        /// <param name="element">The element to select on.</param>
-        public static IUIAutomationElement Select(this IUIAutomationElement element)
-        {
-            return InvokeSelectionItem(element);
-        }
-
-        /// <summary>
         /// Invokes a MouseClick action on the element.
         /// </summary>
         /// <param name="element">The element to click on.</param>
@@ -620,6 +611,15 @@ namespace UiaDriverServer.Extensions
             GetCursorPos(out tagPOINT point);
             mouse_event(MouseEventLeftDown, point.x, point.y, 0, 0);
             mouse_event(MouseEventLeftDown, point.x, point.y, 0, 0);
+        }
+
+        /// <summary>
+        /// Select the element if possible.
+        /// </summary>
+        /// <param name="element">The element to select on.</param>
+        public static IUIAutomationElement Select(this IUIAutomationElement element)
+        {
+            return InvokeSelectionItem(element);
         }
 
         /// <summary>
@@ -715,6 +715,7 @@ namespace UiaDriverServer.Extensions
         /// </summary>
         /// <param name="element"><see cref="IUIAutomationElement"/> to get text from.</param>
         /// <returns>The innerText of <see cref="IUIAutomationElement"/>.</returns>
+        [SuppressMessage("Major Code Smell", "S3011:Reflection should not be used to increase accessibility of classes, methods, or fields", Justification = "As design. This method have access to internal resource.")]
         public static string GetText(this IUIAutomationElement element)
         {
             // supported text-patterns
