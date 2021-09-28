@@ -17,12 +17,15 @@ namespace UiaDriverServer
     public static class Program
     {
         // constatns
+        private const string Configuration = "config";
         private const string Hub = "hub";
         private const string HubPort = "hubPort";
         private const string Host = "host";
         private const string Port = "port";
         private const string Register = "register";
-        
+        private const string Tags = "tags";
+        private const string BrowserName = "browserName";
+
         public static void Main(string[] args)
         {
             // cute
@@ -32,7 +35,7 @@ namespace UiaDriverServer
             var arguments = GetArguments(args);
 
             // register
-            if (arguments.ContainsKey(Register))
+            if (arguments.ContainsKey(Register) || arguments.ContainsKey(Configuration))
             {
                 RegisterNode(arguments);
             }
@@ -66,7 +69,9 @@ namespace UiaDriverServer
             var hubPort = arguments.ContainsKey(HubPort) && int.TryParse(arguments[HubPort], out int hubPortOut)
                 ? hubPortOut
                 : 4444;
-            var nodeConfiguration = GetNodeConfiguration(port, hubPort, host);
+            var tags = arguments.ContainsKey(Tags) ? GetTags(arguments[Tags]) : new Dictionary<string, string>();
+            var browserName = arguments.ContainsKey(BrowserName) ? arguments[BrowserName] : "UiAutomation";
+            var nodeConfiguration = GetNodeConfiguration(port, hubPort, host, browserName, tags);
 
             // setup
             var content = JsonSerializer.Serialize(nodeConfiguration, options);
@@ -92,20 +97,45 @@ namespace UiaDriverServer
             throw new ArgumentException(message, nameof(arguments));
         }
 
-        private static object GetNodeConfiguration(int port, int hubPort, string host)
+        private static IDictionary<string, string> GetTags(string tags)
         {
+            // setup
+            var _tags = tags.Split(";");
+            var outcome = new Dictionary<string, string>();
+
+            // build
+            foreach (var tag in _tags)
+            {
+                var _tag = tag.Split("=");
+                outcome[_tag[0].Trim()] = _tag[1].Trim();
+            }
+
+            // get
+            return outcome;
+        }
+
+        private static object GetNodeConfiguration(int port, int hubPort, string host, string browserName, IDictionary<string, string> tags)
+        {
+            // setup
+            var capabilities = new Dictionary<string, object>
+            {
+                ["browserName"] = browserName,
+                ["browserVersion"] = "1.0",
+                ["platform"] = "WINDOWS",
+                ["maxInstances"] = 1,
+                ["role"] = "WebDriver"
+            };
+            foreach (var tag in tags)
+            {
+                capabilities[tag.Key] = tag.Value;
+            }
+
+            // get
             return new
             {
                 Capabilities = new[]
                 {
-                    new
-                    {
-                        BrowserName = "UiAutomation",
-                        BrowserVersion = "1.0",
-                        Platform = "WINDOWS",
-                        MaxInstances = 1,
-                        Role = "WebDriver"
-                    }
+                    capabilities
                 },
                 Configuration = new
                 {
