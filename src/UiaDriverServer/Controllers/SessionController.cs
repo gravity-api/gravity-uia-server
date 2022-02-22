@@ -1,15 +1,17 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 using UiaDriverServer.Components;
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
 
 using UIAutomationClient;
@@ -19,6 +21,13 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class SessionController : UiaController
     {
+        private readonly ILogger<SessionController> logger;
+
+        public SessionController(ILogger<SessionController> logger)
+        {
+            this.logger = logger;
+        }
+
         // native iterop       
         [DllImport("user32.dll")]
         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -30,25 +39,22 @@ namespace UiaDriverServer.Controllers
         [HttpGet]
         public IActionResult Dom([FromRoute] string id)
         {
-            // setup conditions
-            var haveSession = sessions.ContainsKey(id);
-            if (!haveSession)
+            // setup
+            var notFound = new ContentResult
             {
-                return new ContentResult
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Content = $"Get-Session -Session [{id}] = NotFound",
-                    ContentType = MediaTypeNames.Text.Plain
-                };
-            }
-
-            // return xml
-            return new ContentResult
+                StatusCode = StatusCodes.Status404NotFound,
+                Content = $"Get-Session -Session [{id}] = NotFound",
+                ContentType = MediaTypeNames.Text.Plain
+            };
+            var ok = new ContentResult
             {
                 StatusCode = StatusCodes.Status200OK,
                 Content = $"{sessions[id].Dom}",
                 ContentType = MediaTypeNames.Application.Xml
             };
+
+            // get
+            return sessions.ContainsKey(id) ? ok : notFound;
         }
 
         // GET wd/hub/status
@@ -77,7 +83,7 @@ namespace UiaDriverServer.Controllers
         [HttpGet]
         public IActionResult Shutdown()
         {
-            Exit();
+            Utilities.CloseDriver();
             return Ok();
         }
 
@@ -86,26 +92,32 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session")]
         [Route("session")]
         [HttpPost]
-        public IActionResult Session([FromBody] Capabilities capabilities)
+        public IActionResult Session([FromBody]Capabilities capabilities)
         {
-            // evaluate
-            var eval = Evaluate(capabilities, out bool passed);
-            if (!passed)
+            // internal server error
+            var (response, assertion) = capabilities.AssertCapabilities();
+            if (!assertion)
             {
-                return eval;
+                return response;
             }
 
-            // get session initialization information
-            var args = string.Empty;
+            // setup
+            var caps = capabilities.DesiredCapabilities;
+
+            // build
+            var args = caps.ContainsKey(UiaCapability.Arguments)
+                ? JsonSerializer.Deserialize<IEnumerable<string>>($"{caps[UiaCapability.Arguments]}")
+                : Array.Empty<string>();
+            var mount = caps.ContainsKey(UiaCapability.Mount) && ((JsonElement)caps[UiaCapability.Mount]).GetBoolean();
             var executeable = $"{capabilities.DesiredCapabilities[UiaCapability.Application]}";
-            if (capabilities.DesiredCapabilities.ContainsKey(UiaCapability.Arguments))
-            {
-                args = $"{capabilities.DesiredCapabilities[UiaCapability.Arguments]}";
-            }
-            var process = Get(executeable, args).WaitForHandle(TimeSpan.FromSeconds(60));
+
+            // get session
+            var process = mount
+                ? Process.GetProcesses().FirstOrDefault(i => executeable.ToUpper().Contains(i.ProcessName.ToUpper()))
+                : Utilities.StartProcess(executeable, string.Join(" ", args));
 
             // exit conditions
-            if (process.MainWindowHandle == default)
+            if (process.MainWindowHandle == default && process.Handle == default && (process.SafeHandle.IsInvalid || process.SafeHandle.IsClosed))
             {
                 return new ContentResult
                 {
@@ -114,10 +126,13 @@ namespace UiaDriverServer.Controllers
             }
 
             // compose session
-            var session = new Session(new CUIAutomation8())
+            var treeScope = caps.ContainsKey(UiaCapability.TreeScope)
+                ? (TreeScope)((JsonElement) caps[UiaCapability.TreeScope]).GetInt32()
+                : TreeScope.TreeScope_Descendants;
+            var session = new Session(new CUIAutomation8(), process)
             {
-                Application = process,
-                Capabilities = capabilities.DesiredCapabilities
+                Capabilities = capabilities.DesiredCapabilities,
+                TreeScope = treeScope
             };
 
             // generate virtual DOM
@@ -125,12 +140,15 @@ namespace UiaDriverServer.Controllers
 
             // apply session
             session.Dom = domFactory.Create();
-            session.SessionId = $"{process.MainWindowHandle}";
+            session.SessionId = process.MainWindowHandle == default ? $"{process.Handle}" : $"{process.MainWindowHandle}";
             sessions[session.SessionId] = session;
 
             // put to screen
-            var message = $"Create-Session -Session {session.SessionId} -Application {session.Application.StartInfo.FileName} = Created";
-            Trace.TraceInformation(message);
+            var message = $"Create-Session " +
+                $"-Session {session.SessionId} " +
+                $"-Application {session.Application.GetNameOrFile()} = Created";
+            logger.LogInformation(message);
+            logger.LogInformation($"Get-VirtualDom = /session/{session.SessionId}");
 
             // set response
             return Ok(new { Value = session });
@@ -177,73 +195,5 @@ namespace UiaDriverServer.Controllers
             // get
             return Ok();
         }
-
-        private IActionResult Evaluate(Capabilities capabilities, out bool passed)
-        {
-            // shortcuts
-            var c = capabilities.DesiredCapabilities;
-            passed = false;
-
-            // evaluate
-            if (!c.ContainsKey(UiaCapability.Application))
-            {
-                var exception = Get(UiaCapability.Application);
-                return new ContentResult
-                {
-                    Content = exception.Message,
-                    ContentType = MediaTypeNames.Text.Plain,
-                    StatusCode = StatusCodes.Status500InternalServerError
-                };
-            }
-            if (!c.ContainsKey(UiaCapability.PlatformName))
-            {
-                var exception = Get(UiaCapability.PlatformName);
-                return new ContentResult
-                {
-                    Content = exception.Message,
-                    ContentType = MediaTypeNames.Text.Plain,
-                    StatusCode = StatusCodes.Status500InternalServerError
-                };
-            }
-            if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
-            {
-                var exception =
-                    new ArgumentException("Platform name must be 'windows'", nameof(capabilities));
-                return new ContentResult
-                {
-                    Content = exception.Message,
-                    ContentType = MediaTypeNames.Text.Plain,
-                    StatusCode = StatusCodes.Status500InternalServerError
-                };
-            }
-            passed = true;
-            return Ok();
-        }
-
-        private static ArgumentException Get(string capabilities)
-        {
-            const string m = "You must provide [{0}] capability";
-            var message = string.Format(m, capabilities);
-            return new ArgumentException(message, nameof(capabilities));
-        }
-
-        private static Process Get(string app, string args)
-        {
-            // initialize notepad process
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo { FileName = app, Arguments = args }
-            };
-            process.Start();
-            process.WaitForInputIdle();
-            return process;
-        }
-
-        private static void Exit() => Task.Run(() =>
-        {
-            Trace.TraceInformation("Shutting down...");
-            Thread.Sleep(1000);
-            Environment.Exit(0);
-        });
     }
 }

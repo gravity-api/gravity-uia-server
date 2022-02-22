@@ -1,8 +1,5 @@
 ﻿/*
  * CHANGE LOG - keep only last 5 threads
- * 
- * 2019-02-07
- *    - modify: better xml comments & document reference
  */
 using System;
 using System.IO;
