@@ -7,9 +7,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Mime;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
+using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
@@ -176,7 +178,7 @@ namespace UiaDriverServer.Controllers
         }
 
         // POST wd/hub/session/[id]
-        // POST session        
+        // POST session
         [Route("wd/hub/session/{id}/window/maximize")]
         [Route("session/{id}/window/maximize")]
         [HttpPost]
@@ -194,6 +196,66 @@ namespace UiaDriverServer.Controllers
 
             // get
             return Ok();
+        }
+
+        // POST wd/hub/session/[id]/actions
+        // POST session/[id]/actions
+        [Route("wd/hub/session/{id}/actions")]
+        [Route("session/{id}/actions")]
+        [HttpPost]
+        public IActionResult Actions([FromRoute]string id, [FromBody]W3ActionsContract data)
+        {
+            // constants
+            const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
+
+            // setup
+            var actions = data.Actions.SelectMany(i => i.Actions).Select(i => i.Type).ToList();
+            var methods = GetType()
+                .GetMethods(Flags)
+                .Where(i => i.GetCustomAttribute<W3ActionAttribute>() != null);
+
+            // iterate
+            foreach (var action in actions)
+            {   
+                var method = methods
+                    .FirstOrDefault(i => i.GetCustomAttribute<W3ActionAttribute>().Type.Equals(action));
+                
+                if(method == null)
+                {
+                    // TODO: error handling
+                    continue;
+                }
+
+                method.Invoke(null, null);
+            }
+
+            // get
+            return Ok();
+        }
+
+
+        [W3Action(type: "pointerMove")]
+        private static void PointerMover()
+        {
+            var a = "";
+        }
+
+        [W3Action(type: "pointerUp")]
+        private static void PointerUp()
+        {
+            var b = "";
+        }
+
+        [W3Action(type: "pointerDown")]
+        private static void PointerDown()
+        {
+            var c = "";
+        }
+
+        [W3Action(type: "pause")]
+        private static void Pause()
+        {
+            var c = "";
         }
     }
 }
