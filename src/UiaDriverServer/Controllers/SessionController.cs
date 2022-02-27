@@ -205,6 +205,19 @@ namespace UiaDriverServer.Controllers
         [HttpPost]
         public IActionResult Actions([FromRoute]string id, [FromBody]W3ActionsContract data)
         {
+            // setup
+            var session = GetSession(id);
+            var origin = data
+                .Actions
+                .SelectMany(i => i.Actions)
+                .FirstOrDefault(i => i.Origin != null && i.Origin.ContainsKey("element-6066-11e4-a52e-4f735466cecf"));
+            var elementId = origin == default ? string.Empty : origin.Origin["element-6066-11e4-a52e-4f735466cecf"];
+            var element = GetElement(session, elementId).UIAutomationElement;
+
+            // get coords
+            // TODO: fix here to get real cords
+            var c = element.GetClickablePoint();
+
             // constants
             const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
 
