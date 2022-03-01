@@ -349,7 +349,7 @@ namespace UiaDriverServer.Controllers
                 {
                     wVk = 0,
                     wScan = 0x11, // W
-                    dwFlags = NativeEnums.KeyEventFags.KeyDown | NativeEnums.KeyEventFags.Scancode,
+                    dwFlags = NativeEnums.KeyEventFlags.KeyDown | NativeEnums.KeyEventFlags.Scancode,
                     time = 0,
                     dwExtraInfo = IntPtr.Zero,
                 },
@@ -373,7 +373,7 @@ namespace UiaDriverServer.Controllers
 
                     wVk = 0,
                     wScan = 0x11, // W
-                    dwFlags = NativeEnums.KeyEventFags.KeyUp | NativeEnums.KeyEventFags.Scancode,
+                    dwFlags = NativeEnums.KeyEventFlags.KeyUp | NativeEnums.KeyEventFlags.Scancode,
                     time = 0,
                     dwExtraInfo = IntPtr.Zero,
                 },
@@ -409,7 +409,7 @@ namespace UiaDriverServer.Controllers
             {
                 public ushort wVk;
                 public ushort wScan;
-                public NativeEnums.KeyEventFags dwFlags;
+                public NativeEnums.KeyEventFlags dwFlags;
                 public uint time;
                 public IntPtr dwExtraInfo;
             }
@@ -439,7 +439,7 @@ namespace UiaDriverServer.Controllers
                 Wheel = 0x0800,
                 Absolute = 0x8000,
             }
-            internal enum KeyEventFags : uint
+            internal enum KeyEventFlags : uint
             {
                 KeyDown = 0x0000,
                 ExtendedKey = 0x0001,
