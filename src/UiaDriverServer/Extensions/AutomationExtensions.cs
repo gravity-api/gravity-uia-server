@@ -29,9 +29,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Windows.Forms;
 using System.Xml.Linq;
 using System.Xml.XPath;
-
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
@@ -939,15 +939,38 @@ namespace UiaDriverServer.Extensions
             }
 
             // setup
-            var left = element.CurrentBoundingRectangle.left;
-            var right = element.CurrentBoundingRectangle.right;
-            var top = element.CurrentBoundingRectangle.top;
-            var bottom = element.CurrentBoundingRectangle.bottom;
-            x = (left + right) / 2;
-            y = (top + bottom) / 2;
+
+
+            var p = element.CurrentBoundingRectangle;
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Mouse,
+                mouseInput = new NativeStructs.MouseInput
+                {
+                    dx = 0,
+                    dy = 0,
+                    mouseData = 0,
+                    dwFlags = NativeEnums.MouseEventFlags.Absolute | NativeEnums.MouseEventFlags.RightDown | NativeEnums.MouseEventFlags.Move,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((p.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((p.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            //input.mouseInput.dwFlags = NativeEnums.MouseEventFlags.Absolute | NativeEnums.MouseEventFlags.LeftUp | NativeEnums.MouseEventFlags.Move;
+            //NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
+
+            //var left = element.CurrentBoundingRectangle.left;
+            //var right = element.CurrentBoundingRectangle.right;
+            //var top = element.CurrentBoundingRectangle.top;
+            //var bottom = element.CurrentBoundingRectangle.bottom;
+            //x = (left + right) / 2;
+            //y = (top + bottom) / 2;
 
             // get
-            return new ClickablePoint(x, y);
+            return new ClickablePoint(input.mouseInput.dx, input.mouseInput.dy);
         }
 
         private static IEnumerable<int> InvokeGetPatterns(IUIAutomationElement element)
@@ -1186,5 +1209,55 @@ namespace UiaDriverServer.Extensions
             [0x52] = "Ins",
             [0x53] = "Del"
         };
+        private static class NativeStructs
+        {
+            [StructLayout(LayoutKind.Sequential)]
+            public struct Input
+            {
+                public NativeEnums.SendInputEventType type;
+                public MouseInput mouseInput;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MouseInput
+            {
+                public int dx;
+                public int dy;
+                public uint mouseData;
+                public NativeEnums.MouseEventFlags dwFlags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
+        }
+        private static class NativeEnums
+        {
+            internal enum SendInputEventType : int
+            {
+                Mouse = 0,
+                Keyboard = 1,
+                Hardware = 2,
+            }
+
+            [Flags]
+            internal enum MouseEventFlags : uint
+            {
+                Move = 0x0001,
+                LeftDown = 0x0002,
+                LeftUp = 0x0004,
+                RightDown = 0x0008,
+                RightUp = 0x0010,
+                MiddleDown = 0x0020,
+                MiddleUp = 0x0040,
+                XDown = 0x0080,
+                XUp = 0x0100,
+                Wheel = 0x0800,
+                Absolute = 0x8000,
+            }
+        }
+        private static class NativeMethods
+        {
+            [DllImport("user32.dll", SetLastError = true)]
+            internal static extern uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
+        }
     }
 }

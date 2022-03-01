@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-
+using OpenQA.Selenium;
+using OpenQA.Selenium.Interactions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +11,8 @@ using System.Net.Mime;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-
+using System.Threading;
+using System.Windows.Forms;
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
@@ -24,6 +26,8 @@ namespace UiaDriverServer.Controllers
     public class SessionController : UiaController
     {
         private readonly ILogger<SessionController> logger;
+        public string _sessionId;
+
 
         public SessionController(ILogger<SessionController> logger)
         {
@@ -94,7 +98,7 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session")]
         [Route("session")]
         [HttpPost]
-        public IActionResult Session([FromBody]Capabilities capabilities)
+        public IActionResult Session([FromBody] Capabilities capabilities)
         {
             // internal server error
             var (response, assertion) = capabilities.AssertCapabilities();
@@ -129,14 +133,14 @@ namespace UiaDriverServer.Controllers
 
             // compose session
             var treeScope = caps.ContainsKey(UiaCapability.TreeScope)
-                ? (TreeScope)((JsonElement) caps[UiaCapability.TreeScope]).GetInt32()
+                ? (TreeScope)((JsonElement)caps[UiaCapability.TreeScope]).GetInt32()
                 : TreeScope.TreeScope_Descendants;
             var session = new Session(new CUIAutomation8(), process)
             {
                 Capabilities = capabilities.DesiredCapabilities,
                 TreeScope = treeScope
             };
-
+            
             // generate virtual DOM
             var domFactory = new DomFactory(session);
 
@@ -203,10 +207,12 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session/{id}/actions")]
         [Route("session/{id}/actions")]
         [HttpPost]
-        public IActionResult Actions([FromRoute]string id, [FromBody]W3ActionsContract data)
+        public IActionResult Actions([FromRoute] string id, [FromBody] W3ActionsContract data)
         {
-            // setup
+            //setup
             var session = GetSession(id);
+            
+
             var origin = data
                 .Actions
                 .SelectMany(i => i.Actions)
@@ -214,61 +220,239 @@ namespace UiaDriverServer.Controllers
             var elementId = origin == default ? string.Empty : origin.Origin["element-6066-11e4-a52e-4f735466cecf"];
             var element = GetElement(session, elementId).UIAutomationElement;
 
-            // get coords
+            //get coords
             // TODO: fix here to get real cords
             var c = element.GetClickablePoint();
-
+           
             // constants
             const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
 
-            // setup
+            //setup
             var actions = data.Actions.SelectMany(i => i.Actions).Select(i => i.Type).ToList();
             var methods = GetType()
                 .GetMethods(Flags)
                 .Where(i => i.GetCustomAttribute<W3ActionAttribute>() != null);
 
-            // iterate
+            //iterate
             foreach (var action in actions)
-            {   
+            {
                 var method = methods
                     .FirstOrDefault(i => i.GetCustomAttribute<W3ActionAttribute>().Type.Equals(action));
-                
-                if(method == null)
+
+                if (method == null)
                 {
-                    // TODO: error handling
+                    
+                    //throw new InvalidOperationException("The method not exists" + method);
+
+                    //TODO: error handling
                     continue;
                 }
-
-                method.Invoke(null, null);
+                var parameters = new object[] { element };
+                if (method.GetParameters().First().ParameterType == typeof (int)) {
+                    parameters = new object[] { 0 };
+                }
+                method.Invoke(null, parameters);
             }
 
-            // get
+            //get
             return Ok();
         }
 
 
         [W3Action(type: "pointerMove")]
-        private static void PointerMover()
+        private static void PointerMove(IUIAutomationElement element)
         {
-            var a = "";
+
+
+          var position = element.CurrentBoundingRectangle; 
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Mouse,
+                mouseInput = new NativeStructs.MouseInput
+                {
+                    dx = 0,
+                    dy = 0,
+                    mouseData = 0,
+                    dwFlags = NativeEnums.MouseEventFlags.Move,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((position.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((position.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
+
         }
 
         [W3Action(type: "pointerUp")]
-        private static void PointerUp()
+        private static void PointerUp(IUIAutomationElement element)
         {
-            var b = "";
+            var position = element.CurrentBoundingRectangle; 
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Mouse,
+                mouseInput = new NativeStructs.MouseInput
+                {
+                    dx = 0,
+                    dy = 0,
+                    mouseData = 0,
+                    dwFlags = NativeEnums.MouseEventFlags.LeftUp,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((position.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((position.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
+
         }
 
         [W3Action(type: "pointerDown")]
-        private static void PointerDown()
+        private static void PointerDown(IUIAutomationElement element)
         {
-            var c = "";
+            var position = element.CurrentBoundingRectangle;
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Mouse,
+                mouseInput = new NativeStructs.MouseInput
+                {
+                    dx = 0,
+                    dy = 0,
+                    mouseData = 0,
+                    dwFlags = NativeEnums.MouseEventFlags.LeftDown,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((position.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((position.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
         }
 
         [W3Action(type: "pause")]
-        private static void Pause()
+        private static void Pause(int time)
         {
-            var c = "";
+            Thread.Sleep(time);
+        }
+
+        [W3Action(type: "keyDown")]
+        private static void KeyDown(IUIAutomationElement element, object key)
+        {
+            var position = element.CurrentBoundingRectangle;
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Keyboard,
+                keyInput = new NativeStructs.KeyInput
+                {
+                    wVk = 0,
+                    wScan = 0x11, // W
+                    dwFlags = NativeEnums.KeyEventFags.KeyDown | NativeEnums.KeyEventFags.Scancode,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((position.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((position.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
+
+        }
+
+        [W3Action(type: "keyUp")]
+        private static void KeyUp(IUIAutomationElement element, object key)
+        {
+            var position = element.CurrentBoundingRectangle;
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Keyboard,
+                keyInput = new NativeStructs.KeyInput
+                {
+
+                    wVk = 0,
+                    wScan = 0x11, // W
+                    dwFlags = NativeEnums.KeyEventFags.KeyUp | NativeEnums.KeyEventFags.Scancode,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((position.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((position.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
+
+
+        }
+        private static class NativeStructs
+        {
+            [StructLayout(LayoutKind.Sequential)]
+            public struct Input
+            {
+                public NativeEnums.SendInputEventType type;
+                public MouseInput mouseInput;
+                public KeyInput keyInput;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MouseInput
+            {
+                public int dx;
+                public int dy;
+                public uint mouseData;
+                public NativeEnums.MouseEventFlags dwFlags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
+            public struct KeyInput
+            {
+                public ushort wVk;
+                public ushort wScan;
+                public NativeEnums.KeyEventFags dwFlags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
+        }
+
+        private static class NativeEnums
+        {
+            internal enum SendInputEventType : int
+            {
+                Mouse = 0,
+                Keyboard = 1,
+                Hardware = 2,
+            }
+
+            [Flags]
+            internal enum MouseEventFlags : uint
+            {
+                Move = 0x0001,
+                LeftDown = 0x0002,
+                LeftUp = 0x0004,
+                RightDown = 0x0008,
+                RightUp = 0x0010,
+                MiddleDown = 0x0020,
+                MiddleUp = 0x0040,
+                XDown = 0x0080,
+                XUp = 0x0100,
+                Wheel = 0x0800,
+                Absolute = 0x8000,
+            }
+            internal enum KeyEventFags : uint
+            {
+                KeyDown = 0x0000,
+                ExtendedKey = 0x0001,
+                KeyUp = 0x0002,
+                Unicode = 0x0004,
+                Scancode = 0x0008
+            }
+        }
+        private static class NativeMethods
+        {
+            [DllImport("user32.dll", SetLastError = true)]
+            internal static extern uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
         }
     }
+
 }
