@@ -6,6 +6,7 @@ using OpenQA.Selenium.Interactions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Reflection;
@@ -385,6 +386,54 @@ namespace UiaDriverServer.Controllers
 
 
         }
+
+
+        // POST wd/hub/session/[id]/execute/sync
+        // POST session/[id]/execute/sync        
+        [Route("wd/hub/session/{id}/execute/sync")]
+        [Route("session/{id}/execute/sync")]
+        [HttpPost]
+        public IActionResult ExecuteScript(string id, string script)
+        {
+            // get session
+            var session = GetSession(id);
+            var tempPath = System.IO.Path.GetTempPath();
+            string fileName = "autoitscript.au3";
+            string scriptToRun = System.IO.Path.Combine(tempPath, fileName);
+            System.IO.File.WriteAllText(scriptToRun, script);
+
+            System.IO.File.Move(scriptToRun, Path.ChangeExtension(scriptToRun, ".au3"));
+
+            //invoke
+
+            var info = new ProcessStartInfo()
+            {
+                // FileName = "CMD.exe",
+                FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe",
+                Arguments = " \"" + scriptToRun + "\"",
+                WindowStyle = ProcessWindowStyle.Normal,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
+                UseShellExecute = true,
+                CreateNoWindow = false,
+                Verb = "runas",
+            };
+            var process = new Process()
+            {
+                StartInfo = info
+            };
+            process.Start();
+
+            process.WaitForExit();
+            process.Close();
+            Trace.TraceInformation("Autoit script  run successfully"); ;
+            System.IO.File.Delete(scriptToRun);
+
+            // get
+            return Ok();
+
+        }
+
+
         private static class NativeStructs
         {
             [StructLayout(LayoutKind.Sequential)]
