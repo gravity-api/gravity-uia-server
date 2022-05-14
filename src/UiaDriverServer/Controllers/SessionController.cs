@@ -101,6 +101,23 @@ namespace UiaDriverServer.Controllers
         [HttpPost]
         public IActionResult Session([FromBody] Capabilities capabilities)
         {
+            // return simulator app
+            var isAppCapability = capabilities.DesiredCapabilities.ContainsKey(UiaCapability.Application);
+            var isAppCapabilityValid = isAppCapability && !string.IsNullOrEmpty($"{capabilities.DesiredCapabilities[UiaCapability.Application]}");
+            var isSimulator = isAppCapability && $"{capabilities.DesiredCapabilities[UiaCapability.Application]}".Equals("simulator", StringComparison.OrdinalIgnoreCase);
+
+            if (isSimulator)
+            {
+                var simulatorSession = Guid.NewGuid();
+                var createMessage = $"Create-Session " +
+                   $"-Session {simulatorSession}" +
+                   " -Application Simulator = (Created | NoVirtualDom)";
+                logger.LogInformation(createMessage);
+
+                // set response
+                return Ok(new { Value = session });
+            }
+
             // internal server error
             var (response, assertion) = capabilities.AssertCapabilities();
             if (!assertion)
@@ -387,7 +404,6 @@ namespace UiaDriverServer.Controllers
 
         }
 
-
         // POST wd/hub/session/[id]/execute/sync
         // POST session/[id]/execute/sync        
         [Route("wd/hub/session/{id}/execute/sync")]
@@ -397,20 +413,18 @@ namespace UiaDriverServer.Controllers
         {
             // get session
             var session = GetSession(id);
-            var tempPath = System.IO.Path.GetTempPath();
-            string fileName = "autoitscript.au3";
-            string scriptToRun = System.IO.Path.Combine(tempPath, fileName);
+            var tempPath = Path.GetTempPath();
+            string fileName = $"{session.SessionId}-autoitscript.au3";
+            string scriptToRun = Path.Combine(tempPath, fileName);
             System.IO.File.WriteAllText(scriptToRun, script);
 
             System.IO.File.Move(scriptToRun, Path.ChangeExtension(scriptToRun, ".au3"));
 
             //invoke
-
             var info = new ProcessStartInfo()
             {
-                // FileName = "CMD.exe",
                 FileName = @"C:\Program Files (x86)\AutoIt3\AutoIt3.exe",
-                Arguments = " \"" + scriptToRun + "\"",
+                Arguments = $"\"{scriptToRun}\"",
                 WindowStyle = ProcessWindowStyle.Normal,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
                 UseShellExecute = true,
@@ -421,18 +435,16 @@ namespace UiaDriverServer.Controllers
             {
                 StartInfo = info
             };
-            process.Start();
 
+            process.Start();
             process.WaitForExit();
             process.Close();
-            Trace.TraceInformation("Autoit script  run successfully"); ;
+            Trace.TraceInformation("Invoke-Script -Type (AutoRun | AutoIT) = OK"); ;
             System.IO.File.Delete(scriptToRun);
 
             // get
             return Ok();
-
         }
-
 
         private static class NativeStructs
         {
@@ -497,11 +509,11 @@ namespace UiaDriverServer.Controllers
                 Scancode = 0x0008
             }
         }
+
         private static class NativeMethods
         {
             [DllImport("user32.dll", SetLastError = true)]
             internal static extern uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
         }
     }
-
 }

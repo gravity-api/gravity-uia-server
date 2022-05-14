@@ -30,9 +30,13 @@ namespace UiaDriverServer.Controllers
         /// <returns>session information object</returns>
         internal static Session GetSession(string id)
         {
-            if (!sessions.ContainsKey(id))
+            if (!sessions.ContainsKey(id) && string.IsNullOrEmpty(id))
             {
                 return null;
+            }
+            if (!sessions.ContainsKey(id) && !string.IsNullOrEmpty(id))
+            {
+                return new Session { SessionId = id };
             }
             return sessions[id];
         }

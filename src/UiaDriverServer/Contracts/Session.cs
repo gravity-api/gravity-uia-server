@@ -33,6 +33,9 @@ namespace UiaDriverServer.Contracts
 {
     internal class Session
     {
+        public Session()
+        { }
+
         public Session(CUIAutomation8 automation)
             :this(automation, default)
         { }
