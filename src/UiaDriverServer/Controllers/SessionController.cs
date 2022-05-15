@@ -115,7 +115,7 @@ namespace UiaDriverServer.Controllers
                 logger.LogInformation(createMessage);
 
                 // set response
-                return Ok(new { Value = session });
+                return Ok(new { Value = simulatorSession });
             }
 
             // internal server error
