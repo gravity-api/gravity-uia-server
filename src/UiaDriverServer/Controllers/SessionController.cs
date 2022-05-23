@@ -409,9 +409,10 @@ namespace UiaDriverServer.Controllers
         [Route("wd/hub/session/{id}/execute/sync")]
         [Route("session/{id}/execute/sync")]
         [HttpPost]
-        public IActionResult ExecuteScript(string id, string script)
+        public IActionResult ExecuteScript(string id, [FromBody] IDictionary<string, object> data)
         {
             // get session
+            string script = data["script"].ToString();
             var session = GetSession(id);
             var tempPath = Path.GetTempPath();
             string fileName = $"{session.SessionId}-autoitscript.au3";
@@ -427,8 +428,9 @@ namespace UiaDriverServer.Controllers
                 Arguments = $"\"{scriptToRun}\"",
                 WindowStyle = ProcessWindowStyle.Normal,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
-                UseShellExecute = true,
+                UseShellExecute = false,
                 CreateNoWindow = false,
+                RedirectStandardOutput = true,
                 Verb = "runas",
             };
             var process = new Process()
