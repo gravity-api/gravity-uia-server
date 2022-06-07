@@ -115,7 +115,7 @@ namespace UiaDriverServer.Controllers
                 logger.LogInformation(createMessage);
 
                 // set response
-                return Ok(new { Value = simulatorSession });
+                return Ok(new { Value = new { SessionId = $"{simulatorSession}" } });
             }
 
             // internal server error
@@ -175,7 +175,7 @@ namespace UiaDriverServer.Controllers
             logger.LogInformation($"Get-VirtualDom = /session/{session.SessionId}");
 
             // set response
-            return Ok(new { Value = session });
+            return Ok(new { Value = new { session.SessionId } });
         }
 
         // POST wd/hub/session/[id]
