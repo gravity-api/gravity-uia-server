@@ -19,6 +19,6 @@ parameters:
   ]
 
 steps:
-- ${{ each p in parameters.param }}:
+- ${{ each p in parameters.AutoRunMachine }}:
   - script: echo ${{ p }}
 
