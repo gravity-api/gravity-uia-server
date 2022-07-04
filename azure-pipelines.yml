@@ -18,7 +18,22 @@ parameters:
     10.10.10.3
   ]
 
-steps:
-- ${{ each p in parameters.AutoRunMachine }}:
-  - script: echo ${{ p }}
-
+stages:
+  - stage: OpenRdpConnections
+    displayName: Open RDP Connections
+    jobs:
+    - job: OpenConnections
+      displayName: Open Connections
+      steps:
+        ${{ each p in parameters.AutoRunMachine }}
+        - task: PowerShell@2
+          displayName: Open Connection to $(AutoRunMachine)
+          inputs:
+            targetType: 'inline'
+            errorActionPreference: 'continue'
+            failOnStderr: true
+            showWarnings: true
+            pwsh: true
+            script: |
+              #cmdkey /generic:TERMSRV/"10.2.2.185" /user:"TSTA.local\Autouser" /pass:"P@ssw0rd"
+              #mstsc.exe "C:\AutoRun\Tools\RDP\RDP_Settings.rdp" /v "10.2.2.185"
