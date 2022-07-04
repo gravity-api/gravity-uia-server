@@ -10,9 +10,13 @@ pool:
   vmImage: ubuntu-latest
 
 parameters:
-- name: 'param'
+- name: 'AutoRunMachine'
   type: object
-  default: [123,234,456]
+  default: [
+    10.10.10.1,
+    10.10.10.2,
+    10.10.10.3
+  ]
 
 steps:
 - ${{ each p in parameters.param }}:
