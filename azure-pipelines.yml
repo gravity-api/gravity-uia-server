@@ -20,9 +20,9 @@ stages:
     - job: OpenConnections
       displayName: Open Connections
       steps:
-        - ${{ each p in parameters.AutoRunMachine }}:
+        - ${{ each machine in parameters.AutoRunMachine }}:
           - task: PowerShell@2
-            displayName: Open RDP Connection to ${{ p }}
+            displayName: Open RDP Connection to ${{ machine }}
             inputs:
               targetType: 'inline'
               script: |
