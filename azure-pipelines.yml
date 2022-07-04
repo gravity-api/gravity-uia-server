@@ -5,7 +5,12 @@ pool:
   vmImage: ubuntu-latest
 
 parameters:
-- name: 'AutoRunMachine'
+- name: 'JenkinsServerEndpoint'
+  displayName: 'The Endpoint Address of Jenkins Server'
+  default: http://10.2.3.162
+
+- name: 'AutoRunMachines'
+  displayName: 'A Collection of AutoRun Automation Machines'
   type: object
   default: [
     10.10.10.1,
@@ -20,10 +25,51 @@ stages:
     - job: OpenConnections
       displayName: Open Connections
       steps:
-        - ${{ each machine in parameters.AutoRunMachine }}:
+        - ${{ each machine in parameters.AutoRunMachines }}:
           - task: PowerShell@2
             displayName: Open RDP Connection to ${{ machine }}
             inputs:
               targetType: 'inline'
               script: |
-                Write-Host ${{ p }}
+                cmdkey /generic:TERMSRV/"${{ machine }}" /user:"TSTA.local\Autouser" /pass:"P@ssw0rd"
+                mstsc.exe "C:\AutoRun\Tools\RDP\RDP_Settings.rdp" /v "${{ machine }}"
+        
+        - task: maikvandergaag.maikvandergaag-trigger-pipeline.TriggerPipeline.TriggerPipeline@1
+          displayName: Invoke "nightly-win-agent-RDP" Pipeline
+          inputs:
+            serviceConnection: szTempPat
+            project: 'bbb94c5b-ff4d-4e90-b6f3-2904d4e3dd8e'
+            releaseDefinition: 'nightly-win-agent-RDP'
+
+        - task: PowerShell@2
+          displayName: Wait for Test Invocation to Complete
+          inputs:
+            targetType: 'inline'
+            script: |
+              Start-Sleep -Seconds 21600
+    
+    - job: InvokeJenkinsJob
+      dependsOn: OpenConnections
+      displayName: Invoke Jenkins Job
+      steps:
+
+        - task: PowerShell@2
+          displayName: Write Agent Version
+          inputs:
+            targetType: 'inline'
+            script: |
+              [string] $version = "${env:RELEASE_ARTIFACTS__ITX-WIN-BUNDLE-INSTALLER_BUILDNUMBER}"
+              Write-Host "##vso[task.setvariable variable=AgentBuildVersion]$version"
+              Write-Host "agentVersion=$($version)"
+
+        - task: JenkinsQueueJob@2
+          inputs:
+            serverEndpoint: ${{ parameters.JenkinsServerEndpoint }}
+            jobName: 'run-email-win-diag-result'
+            captureConsole: true
+            capturePipeline: true
+            isParameterizedJob: true
+            jobParameters: |
+              kind=win"&"diagnostic
+              version=$(AgentBuildVersion)
+
