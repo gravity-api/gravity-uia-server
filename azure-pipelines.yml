@@ -10,16 +10,11 @@ pool:
   vmImage: ubuntu-latest
 
 parameters:
-- name: 'AutoRunMachines'
+- name: 'param'
   type: object
-  default: ['IP1','IP2','IP3']
+  default: [123,234,456]
 
 steps:
-- ${{ each machine in parameters.AutoRunMachines }}:
-- task: PowerShell@2
-  inputs:
-    targetType: 'inline'
-    script: |
-      # Write your PowerShell commands here.
-      Write-Host "Hello World"
+- ${{ each p in parameters.param }}:
+  - script: echo ${{ p }}
 
