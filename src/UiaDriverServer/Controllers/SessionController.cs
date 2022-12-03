@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿/*
+ * CHANGE LOG - keep only last 5 threads
+ * 
+ * RESSOURCES
+ */
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Interactions;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,6 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
+
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
@@ -26,13 +31,12 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class SessionController : UiaController
     {
-        private readonly ILogger<SessionController> logger;
-        public string _sessionId;
-
+        // members
+        private readonly ILogger<SessionController> _logger;
 
         public SessionController(ILogger<SessionController> logger)
         {
-            this.logger = logger;
+            _logger = logger;
         }
 
         // native iterop       
@@ -112,10 +116,10 @@ namespace UiaDriverServer.Controllers
                 var createMessage = $"Create-Session " +
                    $"-Session {simulatorSession}" +
                    " -Application Simulator = (Created | NoVirtualDom)";
-                logger.LogInformation(createMessage);
+                _logger.LogInformation(createMessage);
 
                 // set response
-                return Ok(new { Value = new { SessionId = $"{simulatorSession}" } });
+                return Ok(new { Value = new { SessionId = $"{simulatorSession}", Capabilities = new Dictionary<string, object>() } });
             }
 
             // internal server error
@@ -129,7 +133,7 @@ namespace UiaDriverServer.Controllers
             var caps = capabilities.DesiredCapabilities;
 
             // build
-            var args = caps.ContainsKey(UiaCapability.Arguments)
+            var args = caps.ContainsKey(UiaCapability.Arguments) && caps[UiaCapability.Arguments] != null
                 ? JsonSerializer.Deserialize<IEnumerable<string>>($"{caps[UiaCapability.Arguments]}")
                 : Array.Empty<string>();
             var mount = caps.ContainsKey(UiaCapability.Mount) && ((JsonElement)caps[UiaCapability.Mount]).GetBoolean();
@@ -150,15 +154,16 @@ namespace UiaDriverServer.Controllers
             }
 
             // compose session
-            var treeScope = caps.ContainsKey(UiaCapability.TreeScope)
-                ? (TreeScope)((JsonElement)caps[UiaCapability.TreeScope]).GetInt32()
+            _ = caps.TryGetValue(UiaCapability.TreeScope, out object treeScopeOut);
+            var treeScope = !string.IsNullOrEmpty($"{treeScopeOut}") && !$"{treeScopeOut}".Equals("none", StringComparison.OrdinalIgnoreCase)
+                ? $"{treeScopeOut}".ConvertToTreeScope()
                 : TreeScope.TreeScope_Descendants;
             var session = new Session(new CUIAutomation8(), process)
             {
                 Capabilities = capabilities.DesiredCapabilities,
                 TreeScope = treeScope
             };
-            
+
             // generate virtual DOM
             var domFactory = new DomFactory(session);
 
@@ -171,11 +176,11 @@ namespace UiaDriverServer.Controllers
             var message = $"Create-Session " +
                 $"-Session {session.SessionId} " +
                 $"-Application {session.Application.GetNameOrFile()} = Created";
-            logger.LogInformation(message);
-            logger.LogInformation($"Get-VirtualDom = /session/{session.SessionId}");
+            _logger.LogInformation(message);
+            _logger.LogInformation($"Get-VirtualDom = /session/{session.SessionId}");
 
             // set response
-            return Ok(new { Value = new { session.SessionId } });
+            return Ok(new { Value = new { session.SessionId,Capabilities = new Dictionary<string, object>() } });
         }
 
         // POST wd/hub/session/[id]
@@ -275,7 +280,6 @@ namespace UiaDriverServer.Controllers
             //get
             return Ok();
         }
-
 
         [W3Action(type: "pointerMove")]
         private static void PointerMove(IUIAutomationElement element)

@@ -2,7 +2,7 @@
  * CHANGE LOG - keep only last 5 threads
  * 
  * 2019-02-07
- *    - modify: better xml comments & document reference
+ *    - modify: better XML comments & document reference
  * 
  * docs.microsoft
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.automationelementinformation?view=netframework-4.7.2
@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Mvc;
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -32,6 +31,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using System.Xml.XPath;
+
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
@@ -40,7 +40,7 @@ using UIAutomationClient;
 
 namespace UiaDriverServer.Extensions
 {
-    internal static class AutomationExtensions
+    internal static partial class AutomationExtensions
     {
         // constants
         private const int MouseEventLeftDown = 0x02;
@@ -48,7 +48,7 @@ namespace UiaDriverServer.Extensions
 
         // native calls
         [DllImport("user32.dll")]
-        public static extern bool GetCursorPos(out tagPOINT lpPoint);
+        private static extern bool GetCursorPos(out tagPOINT lpPoint);
 
         [DllImport("user32.dll")]
         private static extern bool SetPhysicalCursorPos(int x, int y);
@@ -66,14 +66,25 @@ namespace UiaDriverServer.Extensions
 
         #region *** Session      ***
         /// <summary>
+        /// Gets child element from root
+        /// </summary>
+        /// <param name="automation">automation to get root from</param>
+        /// <param name="runtime">element runtime id</param>
+        /// <returns>automation element</returns>
+        public static IUIAutomationElement GetApplicationRoot(this CUIAutomation8 automation, int[] runtime)
+        {
+            var conditions = automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
+            return automation.GetRootElement().FindFirst(TreeScope.TreeScope_Children, conditions);
+        }
+
+        /// <summary>
         /// Gets root element from file explorer instance.
         /// </summary>
-        /// <param name="automation">The <see cref="CUIAutomation8"/> get from.</param>
-        /// <param name="application">The <see cref="Process"/> instance used to create a File Explorer process.</param>
+        /// <param name="session">The session to use.</param>
         /// <returns>An <see cref="IUIAutomationElement"/> interface.</returns>
         public static IUIAutomationElement GetApplicationRoot(this Session session)
         {
-            return session.Application.GetNameOrFile().ToUpper().Contains("EXPLORER.EXE")
+            return session.Application.GetNameOrFile().Contains("EXPLORER.EXE", StringComparison.OrdinalIgnoreCase)
                 ? GetRootFromFileExplorer(session)
                 : GetRootFromApplication(session);
         }
@@ -88,11 +99,11 @@ namespace UiaDriverServer.Extensions
 
             // iteration
             IUIAutomationElement rootElement = null;
-            var timeout = TimeSpan.Zero;
+            var timeout = DateTime.Now.Add(session.Timeout);
 
-            while(rootElement == null && timeout < session.Timeout)
+            while(DateTime.Now < timeout)
             {
-                rootElement = InvokeGetFromFileExplorer(session);
+                rootElement = GetFromFileExplorer(session);
 
                 if (rootElement != null)
                 {
@@ -101,34 +112,33 @@ namespace UiaDriverServer.Extensions
                 }
 
                 Thread.Sleep(100);
-                timeout = timeout.Add(TimeSpan.FromMilliseconds(100));
             }
 
             // get
             return rootElement;
         }
 
-        private static IUIAutomationElement InvokeGetFromFileExplorer(Session session)
+        private static IUIAutomationElement GetFromFileExplorer(Session session)
         {
             // constants
-            var nameProperty = UIA_PropertyIds.UIA_NamePropertyId;
-            var controlTypeProperty = UIA_PropertyIds.UIA_ControlTypePropertyId;
-            var controlTypeWindow = UIA_ControlTypeIds.UIA_WindowControlTypeId;
-            var controlTypeToolBar = UIA_ControlTypeIds.UIA_ToolBarControlTypeId;
+            const int NameProperty = UIA_PropertyIds.UIA_NamePropertyId;
+            const int ControlTypeProperty = UIA_PropertyIds.UIA_ControlTypePropertyId;
+            const int ControlTypeWindow = UIA_ControlTypeIds.UIA_WindowControlTypeId;
+            const int ControlTypeToolBar = UIA_ControlTypeIds.UIA_ToolBarControlTypeId;
 
             // setup
             var folder = session.Application.StartInfo.Arguments;
             var folderLast = new DirectoryInfo(folder).Name;
 
             // setup: windows - chain condition
-            var windowCondition = session.Automation.CreatePropertyCondition(controlTypeProperty, controlTypeWindow);
-            var windowPartialNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folderLast);
-            var windowFullNameCondition = session.Automation.CreatePropertyCondition(nameProperty, folder);
+            var windowCondition = session.Automation.CreatePropertyCondition(ControlTypeProperty, ControlTypeWindow);
+            var windowPartialNameCondition = session.Automation.CreatePropertyCondition(NameProperty, folderLast);
+            var windowFullNameCondition = session.Automation.CreatePropertyCondition(NameProperty, folder);
             var windowNameCondition = session.Automation.CreateOrCondition(windowFullNameCondition, windowPartialNameCondition);
             var windowRootCondition = session.Automation.CreateAndCondition(windowCondition, windowNameCondition);
 
-            // setup: toolbar - chain condition
-            var toolBarCondition = session.Automation.CreatePropertyCondition(controlTypeProperty, controlTypeToolBar);
+            // setup: tool-bar - chain condition
+            var toolBarCondition = session.Automation.CreatePropertyCondition(ControlTypeProperty, ControlTypeToolBar);
 
             // collect: windows
             var window = session.Automation.GetRootElement().FindFirst(TreeScope.TreeScope_Descendants, windowRootCondition);
@@ -139,10 +149,10 @@ namespace UiaDriverServer.Extensions
 
             for (int toolBar = 0; toolBar < toolBars.Length; toolBar++)
             {
-                names.Add($"{toolBars.GetElement(toolBar)?.GetCurrentPropertyValue(nameProperty)}");
+                names.Add($"{toolBars.GetElement(toolBar)?.GetCurrentPropertyValue(NameProperty)}");
             }
 
-            var isWindow = names.Any(i => i.ToUpper().Contains(folder.ToUpper()));
+            var isWindow = names.Any(i => i.Contains(folder, StringComparison.OrdinalIgnoreCase));
 
             // not found
             return isWindow ? window : null;
@@ -152,9 +162,9 @@ namespace UiaDriverServer.Extensions
         {
             // iteration
             IUIAutomationElement rootElement = null;
-            var timeout = TimeSpan.Zero;
+            var timeout = DateTime.Now.Add(session.Timeout);
 
-            while (rootElement == null && timeout < session.Timeout)
+            while (DateTime.Now < timeout)
             {
                 var condition = GetCondition(session);
                 var root = session.Automation.GetRootElement();
@@ -167,7 +177,6 @@ namespace UiaDriverServer.Extensions
                 }
 
                 Thread.Sleep(100);
-                timeout = timeout.Add(TimeSpan.FromMilliseconds(100));
             }
 
             // get
@@ -206,15 +215,15 @@ namespace UiaDriverServer.Extensions
         public static bool GetIsNative(this Session session)
         {
             // members
-            var key = UiaCapability.UseNativeEvents;
+            const string Key = UiaCapability.UseNativeEvents;
             const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
 
             // setup
             var capabilites = session.Capabilities;
-            var isNative = capabilites.ContainsKey(key);
+            var isNative = capabilites.ContainsKey(Key);
 
             // get
-            return isNative && $"{capabilites[key]}".Equals("true", Compare);
+            return isNative && $"{capabilites[Key]}".Equals("true", Compare);
         }
 
         /// <summary>
@@ -240,13 +249,10 @@ namespace UiaDriverServer.Extensions
         /// <summary>
         /// Synthesizes keystrokes, mouse motions, and button clicks.
         /// </summary>
-        /// <param name="automation">The <see cref="CUIAutomation8"/> to send input to.</param>
         /// <param name="inputs">A collection of input objects.</param>
         /// <returns>The number of events that it successfully inserted into the keyboard or mouse input stream.</returns>
         /// <remarks>If the function returns zero, the input was already blocked by another thread.</remarks>
-        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used as 'Monkey Patch'")]
-        [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "False positive on IDE0060")]
-        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 automation, params Input[] inputs)
+        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 _, params Input[] inputs)
         {
             // invoke
             var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
@@ -257,14 +263,11 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
-        /// Send a key stroke using a a modifier (e.g. alt, shift, ctrl).
+        /// Send a key stroke using a a modifier (e.g. alt, shift, CTRL).
         /// </summary>
-        /// <param name="automation">The <see cref="CUIAutomation8"/> to send input to.</param>
-        /// <param name="modifier">The modifier (e.g. alt, shift, ctrl).</param>
+        /// <param name="modifier">The modifier (e.g. alt, shift, CTRL).</param>
         /// <param name="key">The key.</param>
-        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used as 'Monkey Patch'")]
-        [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "False positive on IDE0060")]
-        public static void SendModifiedKey(this CUIAutomation8 automation, string modifier, string key)
+        public static void SendModifiedKey(this CUIAutomation8 _, string modifier, string key)
         {
             // locals
             ushort GetKeyCode(string key)
@@ -284,20 +287,8 @@ namespace UiaDriverServer.Extensions
             var inputs = Modify(modifierCode, keyCode).ToArray();
 
             // invoke
-            var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
-            var errorCode = Marshal.GetLastWin32Error();
-        }
-
-        /// <summary>
-        /// Gets child element from root
-        /// </summary>
-        /// <param name="automation">automation to get root from</param>
-        /// <param name="runtime">element runtime id</param>
-        /// <returns>automation element</returns>
-        public static IUIAutomationElement GetApplicationRoot(this CUIAutomation8 automation, int[] runtime)
-        {
-            var conditions = automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
-            return automation.GetRootElement().FindFirst(TreeScope.TreeScope_Children, conditions);
+            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            Marshal.GetLastWin32Error();
         }
 
         /// <summary>
@@ -319,7 +310,7 @@ namespace UiaDriverServer.Extensions
         /// <param name="session">The session to delete.</param>
         public static void Delete(this Session session)
         {
-            // file explorer chile session
+            // file explorer child session
             if (session.GetIsFileExplorer())
             {
                 var appRoot = session.GetApplicationRoot();
@@ -399,16 +390,16 @@ namespace UiaDriverServer.Extensions
         /// Gets an <see cref="IUIAutomationElement"/> by a serialized runtime id.
         /// </summary>
         /// <param name="session">Session to search.</param>
-        /// <param name="domRuntime">Serialized runtime id to find by.</param>
+        /// <param name="runtime">Serialized runtime id to find by.</param>
         /// <returns>A <see cref="IUIAutomationElement"/>.</returns>
-        public static IUIAutomationElement GetElementById(this Session session, string domRuntime)
+        public static IUIAutomationElement GetElementById(this Session session, string runtime)
         {
             // get container
             var containerElement = session.GetApplicationRoot();
 
             // create finding condition
-            var runtime = Utilities.GetRuntime(domRuntime).ToArray();
-            var c = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
+            var domRuntime = Utilities.GetRuntime(runtime).ToArray();
+            var c = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, domRuntime);
 
             // get element
             return containerElement.FindFirst(TreeScope.TreeScope_Descendants, c);
@@ -449,7 +440,7 @@ namespace UiaDriverServer.Extensions
 
         #region *** Validation   ***
         /// <summary>
-        /// Assert if element in interactable and can accept a given text.
+        /// Assert if element in interact-able and can accept a given text.
         /// </summary>
         /// <param name="element">The element to evaluate</param>
         /// <param name="text">The string to accept into the element</param>
@@ -495,9 +486,9 @@ namespace UiaDriverServer.Extensions
 
         #region *** Element      ***
         /// <summary>
-        /// Try to get a mouse clickable point of the element.
+        /// Try to get a mouse click-able point of the element.
         /// </summary>
-        /// <param name="element">The Element to get clickable point for.</param>
+        /// <param name="element">The Element to get click-able point for.</param>
         /// <returns>A ClickablePoint object.</returns>
         public static ClickablePoint GetClickablePoint(this IUIAutomationElement element)
         {
@@ -525,10 +516,10 @@ namespace UiaDriverServer.Extensions
 
         /// <summary>
         /// Invokes a pattern based MouseClick action on the element. If not possible to use
-        /// pattern, it will use native click. 
+        /// pattern, it will use native click.
         /// </summary>
         /// <param name="element">The element to click on.</param>
-        /// <remarks>This action wll attempt to evaluate the center of the element and click on it.</remarks>
+        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
         public static IUIAutomationElement Click(this IUIAutomationElement element)
         {
             return InvokeClick(element, isNative: false);
@@ -539,13 +530,13 @@ namespace UiaDriverServer.Extensions
         /// </summary>
         /// <param name="element">The element to click on.</param>
         /// <param name="isNative">Set to <see cref="true"/> to invoke native click.</param>
-        /// <remarks>This action wll attempt to evaluate the center of the element and click on it.</remarks>
+        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
         public static IUIAutomationElement Click(this IUIAutomationElement element, bool isNative)
         {
             return InvokeClick(element, isNative);
         }
 
-        public static IUIAutomationElement InvokeClick(IUIAutomationElement element, bool isNative)
+        private static IUIAutomationElement InvokeClick(IUIAutomationElement element, bool isNative)
         {
             // native
             if (isNative)
@@ -565,13 +556,13 @@ namespace UiaDriverServer.Extensions
             InvokeApproveElement(element);
 
             // setup conditions
-            var isInvoke = element.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) != null;
+            var isInvoke = element?.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) != null;
             var isExpandCollapse = !isInvoke && element.GetCurrentPattern(UIA_PatternIds.UIA_ExpandCollapsePatternId) != null;
             var isSelectable = !isInvoke && !isExpandCollapse && element.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId) != null;
             var isFocus = element.CurrentIsKeyboardFocusable == 1;
 
             // action factory
-            if ((isNative && isFocus) || (!isInvoke && !isExpandCollapse && !isSelectable && isFocus))
+            if (isFocus || (!isInvoke && !isExpandCollapse && !isSelectable && isFocus))
             {
                 return InvokeNativeClick(element);
             }
@@ -652,7 +643,6 @@ namespace UiaDriverServer.Extensions
             void SetValue()
             {
                 element.SetFocus();
-                // System.Windows.Forms.SendKeys.SendWait(text);
             }
 
             // get value pattern
@@ -683,7 +673,7 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
-        /// generates xml tag-name for this automation element
+        /// Generates XML tag-name for this automation element
         /// </summary>
         /// <param name="element">element to generate tag-name for</param>
         /// <returns>element tag-name</returns>
@@ -903,16 +893,6 @@ namespace UiaDriverServer.Extensions
                 response.Content = string.Format(message, UiaCapability.Application);
                 return (response, false);
             }
-            if (!c.ContainsKey(UiaCapability.PlatformName))
-            {
-                response.Content = string.Format(message, UiaCapability.PlatformName);
-                return (response, false);
-            }
-            if (!$"{c[UiaCapability.PlatformName]}".Equals("windows", StringComparison.OrdinalIgnoreCase))
-            {
-                response.Content = "Platform name must be 'windows'";
-                return (response, false);
-            }
 
             // setup
             response.StatusCode = StatusCodes.Status200OK;
@@ -932,15 +912,13 @@ namespace UiaDriverServer.Extensions
             var x = point.x;
             var y = point.y;
 
-            // ok
+            // OK
             if ((point.x == 0 && point.y != 0) || (point.x != 0 && point.y == 0) || (point.x != 0 && point.y != 0))
             {
                 return new ClickablePoint(x, y);
             }
 
             // setup
-
-
             var p = element.CurrentBoundingRectangle;
             var input = new NativeStructs.Input
             {
@@ -950,7 +928,7 @@ namespace UiaDriverServer.Extensions
                     dx = 0,
                     dy = 0,
                     mouseData = 0,
-                    dwFlags = NativeEnums.MouseEventFlags.Absolute | NativeEnums.MouseEventFlags.RightDown | NativeEnums.MouseEventFlags.Move,
+                    dwFlags = NativeEnums.MouseEvent.Absolute | NativeEnums.MouseEvent.RightDown | NativeEnums.MouseEvent.Move,
                     time = 0,
                     dwExtraInfo = IntPtr.Zero,
                 },
@@ -1209,6 +1187,7 @@ namespace UiaDriverServer.Extensions
             [0x52] = "Ins",
             [0x53] = "Del"
         };
+
         private static class NativeStructs
         {
             [StructLayout(LayoutKind.Sequential)]
@@ -1224,14 +1203,15 @@ namespace UiaDriverServer.Extensions
                 public int dx;
                 public int dy;
                 public uint mouseData;
-                public NativeEnums.MouseEventFlags dwFlags;
+                public NativeEnums.MouseEvent dwFlags;
                 public uint time;
                 public IntPtr dwExtraInfo;
             }
         }
+
         private static class NativeEnums
         {
-            internal enum SendInputEventType : int
+            internal enum SendInputEventType
             {
                 Mouse = 0,
                 Keyboard = 1,
@@ -1239,8 +1219,9 @@ namespace UiaDriverServer.Extensions
             }
 
             [Flags]
-            internal enum MouseEventFlags : uint
+            internal enum MouseEvent : uint
             {
+                None = 0x0000,
                 Move = 0x0001,
                 LeftDown = 0x0002,
                 LeftUp = 0x0004,
@@ -1254,10 +1235,11 @@ namespace UiaDriverServer.Extensions
                 Absolute = 0x8000,
             }
         }
-        private static class NativeMethods
+
+        private static partial class NativeMethods
         {
-            [DllImport("user32.dll", SetLastError = true)]
-            internal static extern uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
+            [LibraryImport("user32.dll", SetLastError = true)]
+            internal static partial uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
         }
     }
 }

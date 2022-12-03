@@ -104,7 +104,7 @@ namespace UiaClient
             // initialize new driver based on options (new selenium standard)
             // opens "notepad.exe"
             options.Application = "notepad.exe";
-            var driver = new UiaDriver(new Uri("http://192.168.30.179:4444/wd/hub"), options);
+            var driver = new UiaDriver(new Uri("http://localhost:4444/wd/hub"), options);
 
             // waiter instance to avoid element-not-found exception
             var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));

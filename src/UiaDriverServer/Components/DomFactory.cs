@@ -115,7 +115,7 @@ namespace UiaDriverServer.Components
             var id = JsonSerializer.Serialize(runtime);
             attributes.Add("id", id);
 
-            // initialize xml row
+            // initialize XML row
             var xmlNode = new List<string>();
             foreach (var item in attributes)
             {

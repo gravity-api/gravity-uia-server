@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
 using System.Collections.Generic;
-using System.Linq;
 
 using UiaDriverServer.Extensions;
 
@@ -47,7 +46,7 @@ namespace UiaDriverServer.Controllers
             var element = GetElement(session, e);
 
             // invoke
-            element.UIAutomationElement.Click(session.GetIsNative());
+            element.UIAutomationElement.Click();
 
             // sync
             session.RevokeVirtualDom();

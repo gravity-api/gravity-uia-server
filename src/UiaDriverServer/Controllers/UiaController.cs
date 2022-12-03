@@ -8,7 +8,7 @@ using UiaDriverServer.Contracts;
 
 namespace UiaDriverServer.Controllers
 {
-    // TODO: migrate to DI container with mananged object and remove inherit.
+    // TODO: migrate to DI container with managed object and remove inherit.
     public abstract class UiaController : ControllerBase
     {
         // members: state

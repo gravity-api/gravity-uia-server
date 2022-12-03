@@ -6,7 +6,7 @@
  */
 using System.Runtime.InteropServices;
 
-namespace UiaDriverServer.Contracts
+namespace UiaWebDriverServer.Contracts
 {
     [StructLayout(LayoutKind.Explicit)]
     public struct InputUnion
@@ -16,7 +16,7 @@ namespace UiaDriverServer.Contracts
 
         [FieldOffset(0)]
         public KeyboardInput ki;
-        
+
         [FieldOffset(0)]
         public HardwareInput hi;
     }
