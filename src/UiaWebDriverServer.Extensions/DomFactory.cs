@@ -3,6 +3,7 @@
  * 
  * RESSOURCES
  */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -10,8 +11,6 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using UIAutomationClient;
-
-using UiaWebDriverServer.Extensions;
 
 namespace UiaWebDriverServer.Extensions
 {
@@ -119,6 +118,7 @@ namespace UiaWebDriverServer.Extensions
                 xml.AddRange(nodes);
             }
             xml.Add($"</{tagName}>");
+            Console.WriteLine($"Adding: {tagName}; {xml.Count}");
 
             // get
             return xml;
