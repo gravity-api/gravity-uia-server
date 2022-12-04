@@ -96,6 +96,15 @@ namespace UiaWebDriverServer.Domain.Application
             var name = session?.Application.StartInfo.FileName;
 
             // delete
+            try
+            {
+                session.Application?.Kill(entireProcessTree: true);
+            }
+            catch (Exception e) when (e != null)
+            {
+                var error = e.Message;
+                _logger.LogWarning("Delete-Session -Id {id} = (InternalServerError | {error})", id, error);
+            }
             Sessions.Remove(id);
 
             // log

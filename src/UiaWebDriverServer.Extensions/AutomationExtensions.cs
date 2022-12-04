@@ -589,12 +589,6 @@ namespace UiaWebDriverServer.Extensions
                 return false;
             }
 
-            // check #2: are there styles that prohibit us from sending text to this control?
-            if (element.CurrentIsKeyboardFocusable == 0)
-            {
-                return false;
-            }
-
             // get
             return true;
         }
