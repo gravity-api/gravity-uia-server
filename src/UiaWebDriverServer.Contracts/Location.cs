@@ -10,5 +10,11 @@ namespace UiaWebDriverServer.Contracts
 
         [DataMember]
         public int Left { get; set; }
+
+        [DataMember]
+        public int Right { get; set; }
+
+        [DataMember]
+        public int Bottom { get; set; }
     }
 }

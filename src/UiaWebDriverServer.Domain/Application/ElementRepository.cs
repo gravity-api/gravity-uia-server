@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -23,8 +23,19 @@ namespace UiaWebDriverServer.Domain.Application
 {
     public partial class ElementRepository : IElementRepository
     {
-        [GeneratedRegex(@"(?<![\/\.])\/")]
+        #region *** Expressions  ***
+        [GeneratedRegex(@"(?<=\/(\/)?)\w+(?=\[)")]
+        private static partial Regex GetTypeSegmentPattern();
+
+        [GeneratedRegex(@"(?<=@)\w+")]
+        private static partial Regex GetPropertyTypeSegmentPattern();
+
+        [GeneratedRegex(@"(?<=\[@\w+=('|"")).*(?=('|"")])")]
+        private static partial Regex GetPropertyValueSegmentPattern();
+
+        [GeneratedRegex(@"(?<![\/\.])\(?\/")]
         private static partial Regex GetHierarchyPattern();
+        #endregion
 
         [GeneratedRegex(@"(?<=(\()?(\/\/\*\[\@name=')).*(?=('])(\))?(\[\d+])?)")]
         private static partial Regex GetXpathNamePattern();
@@ -78,18 +89,6 @@ namespace UiaWebDriverServer.Domain.Application
                 return (StatusCodes.Status404NotFound, default);
             }
 
-            // get by name
-            if (GetXpathNamePattern().IsMatch(input: locationStrategy.Value))
-            {
-                return GetByName(session, locationStrategy);
-            }
-
-            // get by control type
-            if(GetXpathTypePattern().IsMatch(input: locationStrategy.Value))
-            {
-                return GetByControlType(session, locationStrategy);
-            }
-
             // get by Cords
             var elementByCords = GetByCords(session, locationStrategy);
             if (elementByCords.Status == StatusCodes.Status200OK)
@@ -98,21 +97,285 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // get by path
-            return GetByPath(session, locationStrategy);
+            return GetByProperty(session, locationStrategy);
         }
+
+        private static (int Status, Element Element) GetByProperty(Session session, LocationStrategy locationStrategy)
+        {
+            // constants
+            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
+
+            // setup conditions
+            var isRoot = locationStrategy.Value.StartsWith("/root", Compare);
+            var xpath = isRoot
+                ? locationStrategy.Value.Replace("/root", string.Empty, Compare)
+                : locationStrategy.Value;
+            
+            // setup
+            var hierarchy = GetHierarchyPattern()
+                .Split(xpath)
+                .Where(i => !string.IsNullOrEmpty(i))
+                .ToArray();
+
+            // bad request
+            if (hierarchy.Length == 0)
+            {
+                return (StatusCodes.Status400BadRequest, default);
+            }
+
+            // find element
+            var rootElement = isRoot ? new CUIAutomation8().GetRootElement() : session.ApplicationRoot;
+            var automationElement = GetElementBySegment(new CUIAutomation8(), rootElement, hierarchy[0]);
+
+            // not found
+            if(automationElement == default)
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            // iterate
+            foreach (var pathSegment in hierarchy.Skip(1))
+            {
+                automationElement = GetElementBySegment(new CUIAutomation8(), automationElement, pathSegment);
+                if(automationElement == default)
+                {
+                    return (StatusCodes.Status404NotFound, default);
+                }
+            }
+
+            // OK
+            var element = automationElement.ConvertToElement();
+            session.Elements[element.Id] = element;
+
+            // get
+            return (StatusCodes.Status200OK, element);
+        }
+
+        private static IUIAutomationElement GetElementBySegment(
+            CUIAutomation8 session,
+            IUIAutomationElement rootElement,
+            string pathSegment)
+        {
+            // setup conditions
+            var controlTypeCondition = GetControlTypeCondition(session, pathSegment);
+            var propertyCondition = GetPropertyCondition(session, pathSegment);
+            var isDescendants = pathSegment.StartsWith("/");
+
+            // setup find first
+            var scope = isDescendants ? TreeScope.TreeScope_Descendants : TreeScope.TreeScope_Children;
+            var condition = controlTypeCondition != default
+                ? session.CreateAndCondition(controlTypeCondition, propertyCondition)
+                : propertyCondition;
+
+            // setup find all
+            var index = GetElementIndexPattern().Match(input: pathSegment).Value;
+            var isIndex = int.TryParse(index, out int indexOut);
+
+            // get single
+            if (!isIndex)
+            {
+                return rootElement.FindFirst(scope, condition);
+            }
+
+            // get by index
+            var elements = rootElement.FindAll(scope, condition);
+            for (int i = 0; i < elements.Length; i++)
+            {
+                var a = elements.GetElement(i).CurrentAutomationId;
+                Console.WriteLine(a);
+            }
+
+            // get
+            return elements.Length == 0 ? default : elements.GetElement(indexOut - 1 < 0 ? 0 : indexOut - 1);
+        }
+
+        private static IUIAutomationCondition GetControlTypeCondition(CUIAutomation8 session, string pathSegment)
+        {
+            // constants
+            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_IgnoreCase;
+
+            // setup
+            var typeSegment = GetTypeSegmentPattern().Match(pathSegment).Value;
+
+            // not found
+            if (string.IsNullOrEmpty(typeSegment))
+            {
+                return default;
+            }
+
+            // get
+            return session
+                .CreatePropertyConditionEx(UIA_PropertyIds.UIA_LocalizedControlTypePropertyId, typeSegment, ConditionFlags);
+        }
+
+        private static IUIAutomationCondition GetPropertyCondition(CUIAutomation8 session, string pathSegment)
+        {
+            // constants
+            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_IgnoreCase;
+            const BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Static;
+            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
+
+            // local
+            static int GetPropertyId(string propertyName)
+            {
+                var fields = typeof(UIA_PropertyIds).GetFields(BindingFlags);
+                var id = fields
+                    .FirstOrDefault(i => i.Name.Equals($"UIA_{propertyName}PropertyId", Compare))?
+                    .GetValue(null);
+                return id == default ? -1 : (int)id;
+            }
+
+            // setup
+            var typeSegment = GetPropertyTypeSegmentPattern().Match(pathSegment).Value;
+            var valueSegment = GetPropertyValueSegmentPattern().Match(pathSegment).Value;
+            var propertyId = GetPropertyId(typeSegment);
+
+            // get
+            return session.CreatePropertyConditionEx(propertyId, valueSegment, ConditionFlags);
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         private static (int Status, Element Element) GetByName(Session session, LocationStrategy locationStrategy)
         {
             // setup
             var name = GetXpathNamePattern().Match(input: locationStrategy.Value).Value;
-            var condition = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_NamePropertyId, name);
+            var condition = new CUIAutomation8().CreatePropertyCondition(UIA_PropertyIds.UIA_NamePropertyId, name);
             var index = GetElementIndexPattern().Match(input: locationStrategy.Value).Value;
             var isIndex = int.TryParse(index, out int indexOut);
             indexOut = isIndex ? indexOut : 1;
 
+            // refresh application root
+            //var aid = session.Application.Id;
+            //var windowCondition = new CUIAutomation8().CreatePropertyCondition(UIA_PropertyIds.UIA_ProcessIdPropertyId, aid);
+            //var applicationRoot = new CUIAutomation8().GetRootElement().FindFirst(session.TreeScope, windowCondition);
+            //session.ApplicationRoot = applicationRoot ?? new CUIAutomation8().GetRootElement();
+
             // find
-            var elements = session.ApplicationRoot.FindAll(TreeScope.TreeScope_Descendants, condition);
+            var isRoot = locationStrategy.Value.StartsWith("/root", StringComparison.OrdinalIgnoreCase);
+            var applicationRoot = isRoot
+                ? new CUIAutomation8().GetRootElement()
+                : session.ApplicationRoot;
+            var elements = applicationRoot.FindAll(TreeScope.TreeScope_Subtree, condition);
+            for (int i = 0; i < elements.Length; i++)
+            {
+                var n = elements.GetElement(i).CurrentName;
+                Console.WriteLine($"Name: {n}");
+               
+            }
             var automationElement = elements.Length > 0 ? elements.GetElement(indexOut - 1) : default;
+
+
 
             // not found
             if (automationElement == default)
@@ -144,13 +407,24 @@ namespace UiaWebDriverServer.Domain.Application
         {
             // setup
             var controlType = GetXpathTypePattern().Match(input: locationStrategy.Value).Value;
-            var condition = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_LocalizedControlTypePropertyId, controlType);
+            var condition = new CUIAutomation8().CreatePropertyCondition(UIA_PropertyIds.UIA_LocalizedControlTypePropertyId, controlType);
             var index = GetElementIndexPattern().Match(input: locationStrategy.Value).Value;
             var isIndex = int.TryParse(index, out int indexOut);
             indexOut = isIndex ? indexOut : 1;
 
             // find
-            var elements = session.ApplicationRoot.FindAll(TreeScope.TreeScope_Descendants, condition);
+            var isRoot = locationStrategy.Value.StartsWith("/root", StringComparison.OrdinalIgnoreCase);
+            var applicationRoot = isRoot
+                ? new CUIAutomation8().GetRootElement()
+                : session.ApplicationRoot;
+            var elements = applicationRoot.FindAll(TreeScope.TreeScope_Subtree, condition);
+            for (int i = 0; i < elements.Length; i++)
+            {
+                var n = elements.GetElement(i).CurrentName;
+                Console.WriteLine($"Name: {n}");
+
+            }
+
             var automationElement = elements.Length > 0 ? elements.GetElement(indexOut - 1) : default;
 
             // not found
@@ -222,9 +496,9 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // find first in hierarchy
-            var element = GetElementByRuntime(session, path: hierarchy[0]);
+            var element = GetElementByRuntime(session, path: $"/root/{hierarchy[0]}");
             var root = hierarchy[0].Contains("root", StringComparison.OrdinalIgnoreCase)
-                ? session.Automation.GetRootElement()
+                ? new CUIAutomation8().GetRootElement()
                 : element.UIAutomationElement;
 
             // not found
@@ -284,10 +558,10 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             var runtime = JsonSerializer.Deserialize<int[]>(domRuntime);
-            var condition = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
+            var condition = new CUIAutomation8().CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
 
             // find
-            var element = session.ApplicationRoot.FindFirst(TreeScope.TreeScope_Children, condition);
+            var element = session.ApplicationRoot.FindFirst(TreeScope.TreeScope_Descendants, condition);
 
             // not found
             if(element == null)

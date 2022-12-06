@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using System.Xml.XPath;
 
 using UIAutomationClient;
@@ -113,7 +114,7 @@ namespace UiaWebDriverServer.Extensions
             var expires = DateTime.Now.Add(timeout);
 
             // iterate
-            while (DateTime.Now<expires)
+            while (DateTime.Now < expires)
             {
                 try
                 {
@@ -456,6 +457,33 @@ namespace UiaWebDriverServer.Extensions
         }
         #endregion
 
+        public static Element ConvertToElement(this IUIAutomationElement automationElement)
+        {
+            // setup
+            var id = string.IsNullOrEmpty(automationElement.CurrentAutomationId)
+                ? $"{Guid.NewGuid()}"
+                : automationElement.CurrentAutomationId;
+            
+            var location = new Location
+            {
+                Bottom = automationElement.CurrentBoundingRectangle.bottom,
+                Left = automationElement.CurrentBoundingRectangle.left,
+                Right = automationElement.CurrentBoundingRectangle.right,
+                Top = automationElement.CurrentBoundingRectangle.top
+            };
+
+            // build
+            var element = new Element
+            {
+                Id = id,
+                UIAutomationElement = automationElement,
+                Location = location
+            };
+
+            // get
+            return element;
+        }
+
         /// <summary>
         /// Gets an element by id.
         /// </summary>
@@ -479,7 +507,13 @@ namespace UiaWebDriverServer.Extensions
         /// <returns>Serialized runtime id.</returns>
         public static string GetRuntime(this Session session, LocationStrategy locationStrategy)
         {
+            // refresh children
+            session.Dom = DomFactory.Create(session.ApplicationRoot, TreeScope.TreeScope_Children);
+
+            // find
             var domElement = session.Dom.XPathSelectElement(locationStrategy.Value);
+            
+            // get
             return domElement?.Attribute("id").Value;
         }
 
