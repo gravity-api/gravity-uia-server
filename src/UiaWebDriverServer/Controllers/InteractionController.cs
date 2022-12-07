@@ -27,7 +27,7 @@ namespace UiaWebDriverServer.Controllers
         public IActionResult SetValue(string s, string e, [FromBody] IDictionary<string, object> data)
         {
             // setup
-            var (statusCode, session) = _domain.SessionsRepository.GetSession(id: s);
+            var (statusCode, _) = _domain.SessionsRepository.GetSession(id: s);
             var element = _domain.ElementsRepostiroy.GetElement(session: s, element: e);
             var text = $"{data["text"]}";
 
@@ -53,10 +53,6 @@ namespace UiaWebDriverServer.Controllers
             // invoke
             element.UIAutomationElement.SendKeys(text);
 
-            // sync
-            element.Node = DomFactory.Create(element.UIAutomationElement, UIAutomationClient.TreeScope.TreeScope_Children);
-            session.RevokeXml();
-
             // get
             return Ok();
         }
@@ -69,7 +65,7 @@ namespace UiaWebDriverServer.Controllers
         public IActionResult InvokeClick(string s, string e)
         {
             // setup
-            var (statusCode, session) = _domain.SessionsRepository.GetSession(id: s);
+            var (statusCode, _) = _domain.SessionsRepository.GetSession(id: s);
             var element = _domain.ElementsRepostiroy.GetElement(session: s, element: e);
 
             // not found
@@ -84,10 +80,6 @@ namespace UiaWebDriverServer.Controllers
 
             // invoke
             element.UIAutomationElement.Click();
-
-            // sync
-            element.Node = DomFactory.Create(element.UIAutomationElement, UIAutomationClient.TreeScope.TreeScope_Children);
-            session.RevokeXml();
 
             // get
             return Ok();
