@@ -1,0 +1,264 @@
+﻿using System.Drawing;
+using System;
+using UIAutomationClient;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using System.Runtime.Serialization;
+using System.Diagnostics;
+using System.Linq;
+using System.Windows;
+using UiaWebDriverServer.Contracts;
+
+[DllImport("user32.dll")]
+static extern bool SetPhysicalCursorPos(int x, int y);
+
+[DllImport("User32.Dll")]
+static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, IntPtr lParam);
+
+[DllImport("user32.dll")]
+static extern IntPtr GetPhysicalCursorPos(out tagPOINT lpPoint);
+
+//[DllImport("user32.dll", SetLastError = true)]
+//static extern uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
+
+[DllImport("user32.dll", SetLastError = true)]
+static extern uint SendInput(uint nInputs, NativeStructs.Input[] pInputs, int cbSize);
+
+// native calls: obsolete
+[DllImport("user32.dll")]
+static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+
+const int MouseEventLeftDown = 0x02;
+const int MouseEventLeftUp = 0x04;
+
+InvokeNativeClick();
+
+static void InvokeNativeClick()
+{
+    //var a = new CUIAutomation8();
+    //var c = a.CreatePropertyCondition(UIA_PropertyIds.UIA_NamePropertyId, "Debug Target");
+    //var d = a.GetRootElement().FindFirst(TreeScope.TreeScope_Descendants, c);
+    //SendMessage(d.CurrentNativeWindowHandle, 513, 0x00000001, 0x000d0026);
+
+    // get current position
+    GetPhysicalCursorPos(out tagPOINT position);
+
+    mouse_event(MouseEventLeftDown, position.x, position.y, 0, 0);
+    mouse_event(MouseEventLeftUp, position.x, position.y, 0, 0);
+
+    //// setup
+    //var down = new NativeStructs.Input
+    //{
+    //    type = NativeEnums.SendInputEventType.Mouse,
+    //    mouseInput = new NativeStructs.MouseInput
+    //    {
+    //        dx = position.x,
+    //        dy = position.y,
+    //        mouseData = 0,
+    //        dwFlags = NativeEnums.MouseEvent.LeftDown | NativeEnums.MouseEvent.Absolute,
+    //        time = 0,
+    //        dwExtraInfo = IntPtr.Zero,
+    //    },
+    //};
+    //var up = new NativeStructs.Input
+    //{
+    //    type = NativeEnums.SendInputEventType.Mouse,
+    //    mouseInput = new NativeStructs.MouseInput
+    //    {
+    //        dx = position.x,
+    //        dy = position.y,
+    //        mouseData = 0,
+    //        dwFlags = NativeEnums.MouseEvent.LeftUp| NativeEnums.MouseEvent.Absolute,
+    //        time = 0,
+    //        dwExtraInfo = IntPtr.Zero,
+    //    },
+    //};
+    //var inputs = new[] { down, up };
+
+    //// invoke
+    //_ = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(NativeStructs.Input)));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+try
+{
+
+    SetPhysicalCursorPos((int)(3646 / 2.5), (int)(271 / 2.5));
+}
+catch (EntryPointNotFoundException) // Not Windows Vista
+{
+    // empty
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//var automation = new CUIAutomation8();
+//var condition = automation.CreatePropertyCondition(UIA_PropertyIds.UIA_NamePropertyId, "כניסה");
+//var element = automation.GetRootElement().FindFirst(TreeScope.TreeScope_Descendants, condition);
+
+
+//var a = InvokeGetClickablePoint(element);
+//var b = "";
+
+//static ClickablePoint InvokeGetClickablePoint(IUIAutomationElement element)
+//{
+//    // setup
+//    element.GetClickablePoint(out tagPOINT point);
+//    var x = point.x;
+//    var y = point.y;
+
+//    // OK
+//    if ((point.x == 0 && point.y != 0) || (point.x != 0 && point.y == 0) || (point.x != 0 && point.y != 0))
+//    {
+//        return new ClickablePoint(x, y);
+//    }
+
+//    // setup
+//    var p = element.CurrentBoundingRectangle;
+//    var input = new NativeStructs.Input
+//    {
+//        type = NativeEnums.SendInputEventType.Mouse,
+//        mouseInput = new NativeStructs.MouseInput
+//        {
+//            dx = 0,
+//            dy = 0,
+//            mouseData = 0,
+//            dwFlags = NativeEnums.MouseEvent.Absolute | NativeEnums.MouseEvent.RightDown | NativeEnums.MouseEvent.Move,
+//            time = 0,
+//            dwExtraInfo = IntPtr.Zero,
+//        },
+//    };
+
+//    var primaryScreen = Screen.PrimaryScreen;
+//    input.mouseInput.dx = Convert.ToInt32((p.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+//    input.mouseInput.dy = Convert.ToInt32((p.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+
+//    // get
+//    return new ClickablePoint(input.mouseInput.dx, input.mouseInput.dy);
+//}
+
+//static Size GetScreenResultion()
+//{
+//    Graphics g = Graphics.FromHwnd(IntPtr.Zero);
+//    IntPtr desktop = g.GetHdc();
+
+//    int physicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.Desktopvertres);
+//    int physicalScreenWidth = GetDeviceCaps(desktop, (int)DeviceCap.Desktophorzres);
+
+//    return new Size(physicalScreenWidth, physicalScreenHeight);
+//}
+
+//enum DeviceCap
+//{
+//    Desktopvertres = 117,
+//    Desktophorzres = 118
+//}
+
+//class ClickablePoint
+//{
+//    public ClickablePoint()
+//        : this(xpos: 0, ypos: 0)
+//    { }
+
+//    public ClickablePoint(int xpos, int ypos)
+//    {
+//        XPos = xpos;
+//        YPos = ypos;
+//    }
+
+//    [DataMember]
+//    public int XPos { get; set; }
+
+//    [DataMember]
+//    public int YPos { get; set; }
+//}
+
+//static class NativeStructs
+//{
+//    [StructLayout(LayoutKind.Sequential)]
+//    public struct Input
+//    {
+//        public NativeEnums.SendInputEventType type;
+//        public MouseInput mouseInput;
+//    }
+
+//    [StructLayout(LayoutKind.Sequential)]
+//    public struct MouseInput
+//    {
+//        public int dx;
+//        public int dy;
+//        public uint mouseData;
+//        public NativeEnums.MouseEvent dwFlags;
+//        public uint time;
+//        public IntPtr dwExtraInfo;
+//    }
+//}
+
+//static class NativeEnums
+//{
+//    internal enum SendInputEventType
+//    {
+//        Mouse = 0,
+//        Keyboard = 1,
+//        Hardware = 2,
+//    }
+
+//    [Flags]
+//    internal enum MouseEvent : uint
+//    {
+//        None = 0x0000,
+//        Move = 0x0001,
+//        LeftDown = 0x0002,
+//        LeftUp = 0x0004,
+//        RightDown = 0x0008,
+//        RightUp = 0x0010,
+//        MiddleDown = 0x0020,
+//        MiddleUp = 0x0040,
+//        XDown = 0x0080,
+//        XUp = 0x0100,
+//        Wheel = 0x0800,
+//        Absolute = 0x8000,
+//    }
+//}
+
+//public struct CursorPoint
+//{
+//    public int X;
+//    public int Y;
+//}

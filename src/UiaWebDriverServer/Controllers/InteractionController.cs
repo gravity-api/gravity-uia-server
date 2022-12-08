@@ -65,7 +65,7 @@ namespace UiaWebDriverServer.Controllers
         public IActionResult InvokeClick(string s, string e)
         {
             // setup
-            var (statusCode, _) = _domain.SessionsRepository.GetSession(id: s);
+            var (statusCode, session) = _domain.SessionsRepository.GetSession(id: s);
             var element = _domain.ElementsRepostiroy.GetElement(session: s, element: e);
 
             // not found
@@ -79,7 +79,7 @@ namespace UiaWebDriverServer.Controllers
             }
 
             // invoke
-            element.UIAutomationElement.Click();
+            element.UIAutomationElement.Click(session.ScaleRatio);
 
             // get
             return Ok();

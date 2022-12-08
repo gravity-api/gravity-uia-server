@@ -118,7 +118,6 @@ namespace UiaWebDriverServer.Extensions
                 xml.AddRange(nodes);
             }
             xml.Add($"</{tagName}>");
-            Console.WriteLine($"Adding: {tagName}; {xml.Count}");
 
             // get
             return xml;

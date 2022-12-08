@@ -129,10 +129,6 @@ namespace UiaWebDriverServer.Domain.Application
                 TreeScope = TreeScope.TreeScope_Children,
             };
 
-            // setup
-            session.Dom = DomFactory.Create(session.ApplicationRoot, session.TreeScope);
-            logger.LogInformation("Create-Session -Session {id} = Created", id);
-
             // build
             var response = new
             {
@@ -158,6 +154,9 @@ namespace UiaWebDriverServer.Domain.Application
             var arguments = capabilities.TryGetValue(UiaCapability.Arguments, out object value) && value != null
                 ? JsonSerializer.Deserialize<IEnumerable<string>>($"{capabilities[UiaCapability.Arguments]}")
                 : Array.Empty<string>();
+            var scaleRatio = capabilities.TryGetValue(UiaCapability.ScaleRatio, out object scaleOut)
+                ? ((JsonElement)scaleOut).GetDouble()
+                : 1.0D;
 
             // get session
             var process = mount
@@ -171,17 +170,12 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // build session
-            _ = capabilities.TryGetValue(UiaCapability.TreeScope, out object treeScopeOut);
-            var treeScope = !string.IsNullOrEmpty($"{treeScopeOut}") && !$"{treeScopeOut}".Equals("none", Compare)
-                ? $"{treeScopeOut}".ConvertToTreeScope()
-                : TreeScope.TreeScope_Children;
-
             var session = new Session(new CUIAutomation8(), process)
             {
                 Capabilities = capabilities,
-                TreeScope = treeScope,
+                TreeScope = TreeScope.TreeScope_Children,
+                ScaleRatio = scaleRatio
             };
-            session.Dom = DomFactory.Create(session.ApplicationRoot, session.TreeScope);
 
             // log
             var id = session.SessionId;

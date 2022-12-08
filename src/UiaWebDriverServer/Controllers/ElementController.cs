@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
-using System.Xml.Linq;
 
 using UiaWebDriverServer.Contracts;
 using UiaWebDriverServer.Domain;

@@ -7,9 +7,7 @@
         public const string Mount = "mount";
         public const string PlatformVersion = "platformVersion";
         public const string PlatformName = "platformName";
-        public const string TreeScope = "treeScope";
-        public const string DevMode = "devMode";
-        public const string UseNativeEvents = "useNativeEvents";
         public const string DriverPath = "driverPath";
+        public const string ScaleRatio = "scaleRatio";
     }
 }

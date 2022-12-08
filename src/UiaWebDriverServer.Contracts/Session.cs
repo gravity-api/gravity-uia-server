@@ -65,6 +65,9 @@ namespace UiaWebDriverServer.Contracts
         [DataMember]
         public IEnumerable<int> Runtime { get; set; }
 
+        [DataMember]
+        public double ScaleRatio { get; set; }
+
         [JsonIgnore]
         public IUIAutomationElement ApplicationRoot { get; set; }
 

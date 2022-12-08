@@ -346,7 +346,7 @@ namespace UiaDriverServer.Controllers
                     dwFlags = NativeEnums.MouseEventFlags.LeftDown,
                     time = 0,
                     dwExtraInfo = IntPtr.Zero,
-                },
+                }
             };
             var primaryScreen = Screen.PrimaryScreen;
             input.mouseInput.dx = Convert.ToInt32((position.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
