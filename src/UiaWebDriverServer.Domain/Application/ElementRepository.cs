@@ -47,6 +47,7 @@ namespace UiaWebDriverServer.Domain.Application
             _sessions = sessions;
         }
 
+        // TODO: refactor to support XPATH pipe
         #region *** Find Element ***
         public (int Status, Element Element) FindElement(string session, LocationStrategy locationStrategy)
         {
