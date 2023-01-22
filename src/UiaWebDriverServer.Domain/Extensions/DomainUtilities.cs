@@ -19,8 +19,8 @@ namespace UiaWebDriverServer.Domain.Extensions
 
             // build process
             var startInfo = isDirectory
-                ? new ProcessStartInfo { FileName = "explorer.exe", Arguments = fileName }
-                : new ProcessStartInfo { FileName = fileName, Arguments = arguments };
+                ? new ProcessStartInfo { FileName = "explorer.exe", Arguments = fileName, WindowStyle = ProcessWindowStyle.Maximized }
+                : new ProcessStartInfo { FileName = fileName, Arguments = arguments, WindowStyle = ProcessWindowStyle.Maximized };
 
             var process = new Process
             {

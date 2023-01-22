@@ -6,6 +6,8 @@
 using System.Collections.Generic;
 using System.Xml.Linq;
 
+using UIAutomationClient;
+
 using UiaWebDriverServer.Contracts;
 
 namespace UiaWebDriverServer.Domain.Application
@@ -18,5 +20,6 @@ namespace UiaWebDriverServer.Domain.Application
         (int StatusCode, XDocument ElementsXml) CreateSessionXml(string id);
         (int StatusCode, Session Session) GetSession(string id);
         int DeleteSession(string id);
+        (int StatusCode, RectangleModel Entity) SetWindowVisualState(string id, WindowVisualState visualState);
     }
 }

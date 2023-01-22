@@ -90,6 +90,27 @@ namespace UiaWebDriverServer.Extensions
         }
         #endregion
 
+        #region *** Element: Rectangle  ***
+        // TODO: add support for element
+        // TODO: add support for window
+        public static RectangleModel GetRectangle(this IUIAutomationElement element)
+        {
+            // setup
+            var pattern = element.GetCurrentPattern(UIA_PatternIds.UIA_WindowPatternId) as IUIAutomationWindowPattern;
+            var isWindow = pattern != null;
+
+            // TODO: add support for element
+            // bad request
+            if (!isWindow)
+            {
+                return new RectangleModel();
+            }
+
+            // get
+            return new RectangleModel();
+        }
+        #endregion
+
         #region *** Element: Tag Name   ***
         /// <summary>
         /// Generates XML tag-name for this automation element

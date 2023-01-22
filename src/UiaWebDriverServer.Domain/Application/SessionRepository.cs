@@ -115,6 +115,30 @@ namespace UiaWebDriverServer.Domain.Application
             return StatusCodes.Status204NoContent;
         }
 
+        public (int StatusCode, RectangleModel Entity) SetWindowVisualState(string id, WindowVisualState visualState)
+        {
+            // not found
+            if (!Sessions.ContainsKey(id))
+            {
+                return (StatusCodes.Status404NotFound, new RectangleModel());
+            }
+
+            // setup
+            var session = Sessions[id];
+
+            // invoke
+            if (session
+                .ApplicationRoot
+                .GetCurrentPattern(UIA_PatternIds.UIA_WindowPatternId) is IUIAutomationWindowPattern pattern)
+            {
+                pattern.SetWindowVisualState(visualState);
+            }
+
+            // get
+            return (StatusCodes.Status200OK, session.ApplicationRoot.GetRectangle());
+
+        }
+
         private static (int StatusCode, object Response, Session Seesion) CreateDesktopSession(IDictionary<string, object> capabilities, ILogger logger)
         {
             // setup
