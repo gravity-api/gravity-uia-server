@@ -18,6 +18,8 @@ using UIAutomationClient;
 using UiaWebDriverServer.Contracts;
 using UiaWebDriverServer.Extensions;
 
+using static System.Collections.Specialized.BitVector32;
+
 namespace UiaWebDriverServer.Domain.Application
 {
     public partial class ElementRepository : IElementRepository
@@ -59,9 +61,30 @@ namespace UiaWebDriverServer.Domain.Application
 
             // setup
             var s = _sessions[session];
+            var segments = locationStrategy.Value.Split("|", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            // bad request
+            if (segments == null || segments.Length == 0)
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            foreach (var segment in segments)
+            {
+                var (statusCode, element) = FindElement(session: s, string.Empty, locationStrategy: new()
+                {
+                    Using = "xpath",
+                    Value = segment
+                });
+
+                if(statusCode == StatusCodes.Status200OK)
+                {
+                    return (statusCode, element);
+                }
+            }
 
             // get
-            return FindElement(session: s, string.Empty, locationStrategy);
+            return (StatusCodes.Status404NotFound, default);
         }
 
         public (int Status, Element Element) FindElement(string session, string element, LocationStrategy locationStrategy)
@@ -193,6 +216,28 @@ namespace UiaWebDriverServer.Domain.Application
             return elements.Length == 0 ? default : elements.GetElement(indexOut - 1 < 0 ? 0 : indexOut - 1);
         }
 
+        private static (int Status, Element Element) GetByCords(Session session, LocationStrategy locationStrategy)
+        {
+            // find
+            var element = locationStrategy.GetFlatPointElement();
+
+            // not found
+            if (element == null)
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            // setup
+            var id = $"{Guid.NewGuid()}";
+
+            // update
+            session.Elements[id] = element;
+
+            // get
+            return (StatusCodes.Status200OK, element);
+        }
+
+
         private static IUIAutomationCondition GetControlTypeCondition(CUIAutomation8 session, string pathSegment)
         {
             // constants
@@ -260,34 +305,13 @@ namespace UiaWebDriverServer.Domain.Application
             var propertyId = GetPropertyId(typeSegment);
 
             // not found
-            if(propertyId == -1)
+            if (propertyId == -1)
             {
                 return default;
             }
 
             // get
             return session.CreatePropertyConditionEx(propertyId, valueSegment, conditionFlag);
-        }
-
-        private static (int Status, Element Element) GetByCords(Session session, LocationStrategy locationStrategy)
-        {
-            // find
-            var element = locationStrategy.GetFlatPointElement();
-
-            // not found
-            if (element == null)
-            {
-                return (StatusCodes.Status404NotFound, default);
-            }
-
-            // setup
-            var id = $"{Guid.NewGuid()}";
-
-            // update
-            session.Elements[id] = element;
-
-            // get
-            return (StatusCodes.Status200OK, element);
         }
         #endregion
 

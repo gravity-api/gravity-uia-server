@@ -3,30 +3,29 @@
  * 
  * RESSOURCES
  */
+using Gravity.Abstraction.Cli;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using System.Text.Json;
-
-using UiaWebDriverServer.Extensions;
-using UiaWebDriverServer.Domain.Formatters;
-using UiaWebDriverServer.Domain.Converters;
-using Microsoft.AspNetCore.Http;
-using UiaWebDriverServer.Domain;
-using System.Collections.Generic;
 using UiaWebDriverServer.Contracts;
-using System.Collections.Concurrent;
+using UiaWebDriverServer.Domain;
 using UiaWebDriverServer.Domain.Application;
-using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Text;
-using System;
-using Gravity.Abstraction.Cli;
+using UiaWebDriverServer.Domain.Converters;
+using UiaWebDriverServer.Domain.Formatters;
+using UiaWebDriverServer.Extensions;
 
 // constatns
 const string Configuration = "config";
