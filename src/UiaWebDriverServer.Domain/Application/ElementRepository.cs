@@ -18,14 +18,12 @@ using UIAutomationClient;
 using UiaWebDriverServer.Contracts;
 using UiaWebDriverServer.Extensions;
 
-using static System.Collections.Specialized.BitVector32;
-
 namespace UiaWebDriverServer.Domain.Application
 {
     public partial class ElementRepository : IElementRepository
     {
         #region *** Expressions  ***
-        [GeneratedRegex(@"(?<=\/(\/)?)\w+(?=\)?\[)")]
+        [GeneratedRegex(@"(?<=((\/)+)?)\w+(?=\)?\[)")]
         private static partial Regex GetTypeSegmentPattern();
 
         [GeneratedRegex(@"(?<=@)\w+")]
@@ -49,7 +47,6 @@ namespace UiaWebDriverServer.Domain.Application
             _sessions = sessions;
         }
 
-        // TODO: refactor to support XPATH pipe
         #region *** Find Element ***
         public (int Status, Element Element) FindElement(string session, LocationStrategy locationStrategy)
         {
@@ -347,7 +344,7 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // find attribute
-            var xml = elementObject.Node;
+            var xml = DomFactory.Create(elementObject.UIAutomationElement, TreeScope.TreeScope_Children);
             var isRoot = xml.Document.Root.Name.LocalName.Equals("root", StringComparison.OrdinalIgnoreCase);
             var value = isRoot
                 ? XElement.Parse($"{xml.XPathSelectElement("/root/*")}")?.Attribute(attribute).Value

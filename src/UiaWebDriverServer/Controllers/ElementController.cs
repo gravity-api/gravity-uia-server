@@ -6,6 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
@@ -81,6 +82,7 @@ namespace UiaWebDriverServer.Controllers
         // GET /session/{s}/element/{e}/attribute/{name}
         [Route("wd/hub/session/{s}/element/{e}/attribute/{name}")]
         [Route("session/{s}/element/{e}/attribute/{name}")]
+        [HttpGet]
         public IActionResult GetElementAttribute(string s, string e, string name)
         {
             // setup
