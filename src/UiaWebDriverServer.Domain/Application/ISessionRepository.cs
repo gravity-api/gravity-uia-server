@@ -21,5 +21,6 @@ namespace UiaWebDriverServer.Domain.Application
         (int StatusCode, Session Session) GetSession(string id);
         int DeleteSession(string id);
         (int StatusCode, RectangleModel Entity) SetWindowVisualState(string id, WindowVisualState visualState);
+        (int StatusCode, string Entity) GetScreenshot();
     }
 }

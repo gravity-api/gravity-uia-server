@@ -6,7 +6,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using System.Net.Http;
 using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 
 using UiaWebDriverServer.Contracts;
@@ -96,7 +98,7 @@ namespace UiaWebDriverServer.Controllers
         }
 
         // POST wd/hub/session/:id
-        // POST session
+        // POST session/:id
         [Route("wd/hub/session/{id}")]
         [Route("session/{id}")]
         [HttpDelete]
@@ -109,6 +111,35 @@ namespace UiaWebDriverServer.Controllers
             return new ContentResult
             {
                 StatusCode = response
+            };
+        }
+
+        // POST wd/hub/session/:id/screenshot
+        // POST session/:id/screenshot
+        [Route("wd/hub/session/{id}/screenshot")]
+        [Route("session/{id}/screenshot")]
+        [HttpGet]
+        public IActionResult GetScreenshot()
+        {
+            // get session
+            var (statusCode, entity) = _domain.SessionsRepository.GetScreenshot();
+
+            // setup
+            var responseObject = new
+            {
+                Value = entity
+            };
+            var content = JsonSerializer.Serialize(responseObject, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            // get
+            return new ContentResult
+            {
+                Content = content,
+                ContentType = MediaTypeNames.Application.Json,
+                StatusCode = statusCode
             };
         }
     }

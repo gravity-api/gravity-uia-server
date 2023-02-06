@@ -9,6 +9,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
 
@@ -219,5 +223,57 @@ namespace UiaWebDriverServer.Domain.Application
             };
             return (StatusCodes.Status200OK, response, session);
         }
+
+        #region *** Get Screenshot ***
+        public (int StatusCode, string Entity) GetScreenshot()
+        {
+            try
+            {
+                // setup
+                var display = DisplayExtensions.GetPhysicalDisplaySize();
+
+                // build image
+                using var bitmap = new Bitmap(display.Width, display.Height);
+                using var graphics = Graphics.FromImage(bitmap);
+
+                graphics.CopyFromScreen(0, 0, 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
+
+                // save image into memory
+                var stream = new MemoryStream();
+                bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+
+                // get
+                return (StatusCodes.Status200OK, stream.ConvertToBase64());
+            }
+            catch (Exception e) when (e != null)
+            {
+                _logger.LogError("Get-Screenshot = (InternalServerError | {Message})", e.GetBaseException().Message);
+                return (StatusCodes.Status200OK, Convert.ToBase64String(Encoding.UTF8.GetBytes("")));
+            }
+        }
+
+        private static class DisplayExtensions
+        {
+            [DllImport("gdi32.dll")]
+            static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
+
+            private enum DeviceCap
+            {
+                Desktopvertres = 117,
+                Desktophorzres = 118
+            }
+
+            public static Size GetPhysicalDisplaySize()
+            {
+                Graphics g = Graphics.FromHwnd(IntPtr.Zero);
+                IntPtr desktop = g.GetHdc();
+
+                int physicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.Desktopvertres);
+                int physicalScreenWidth = GetDeviceCaps(desktop, (int)DeviceCap.Desktophorzres);
+
+                return new Size(physicalScreenWidth, physicalScreenHeight);
+            }
+        }
+        #endregion
     }
 }

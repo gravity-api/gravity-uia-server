@@ -95,6 +95,26 @@ namespace UiaWebDriverServer.Extensions
                 .Replace(">", "&gt;");
         }
 
+        /// <summary>
+        /// Converts a stream into a Base64 string.
+        /// </summary>
+        /// <param name="stream">The stream to convert.</param>
+        /// <returns>Base64 string.</returns>
+        public static string ConvertToBase64(this Stream stream)
+        {
+            if (stream is MemoryStream memoryStream)
+            {
+                return Convert.ToBase64String(memoryStream.ToArray());
+            }
+
+            var bytes = new byte[(int)stream.Length];
+
+            stream.Seek(0, SeekOrigin.Begin);
+            stream.Read(bytes, 0, (int)stream.Length);
+
+            return Convert.ToBase64String(bytes);
+        }
+
         // Utilities
         private static bool AssertJson(string json)
         {
