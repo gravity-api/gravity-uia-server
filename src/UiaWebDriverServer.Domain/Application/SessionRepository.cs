@@ -28,6 +28,10 @@ namespace UiaWebDriverServer.Domain.Application
     {
         // members
         private readonly ILogger<SessionRepository> _logger;
+        private static readonly JsonSerializerOptions s_jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public SessionRepository(IDictionary<string, Session> sessions, ILogger<SessionRepository> logger)
         {
@@ -179,17 +183,20 @@ namespace UiaWebDriverServer.Domain.Application
             // build
             var mount = capabilities.ContainsKey(UiaCapability.Mount) && ((JsonElement)capabilities[UiaCapability.Mount]).GetBoolean();
             var executeable = $"{capabilities[UiaCapability.Application]}";
-            var arguments = capabilities.TryGetValue(UiaCapability.Arguments, out object value) && value != null
-                ? JsonSerializer.Deserialize<IEnumerable<string>>($"{capabilities[UiaCapability.Arguments]}")
+            var arguments = capabilities.TryGetValue(UiaCapability.Arguments, out object argumentsOut) && argumentsOut != null
+                ? JsonSerializer.Deserialize<IEnumerable<string>>($"{capabilities[UiaCapability.Arguments]}", s_jsonOptions)
                 : Array.Empty<string>();
             var scaleRatio = capabilities.TryGetValue(UiaCapability.ScaleRatio, out object scaleOut)
-                ? ((JsonElement)scaleOut).GetDouble()
+                ? double.Parse(scaleOut.ToString())
                 : 1.0D;
+            var impersonation = capabilities.TryGetValue(UiaCapability.Impersonation, out object impersonationOut) && impersonationOut != null
+                ? JsonSerializer.Deserialize<ImpersonationModel>($"{impersonationOut}", s_jsonOptions)
+                : default;
 
             // get session
             var process = mount
                 ? Array.Find(Process.GetProcesses(), i => executeable.Contains(i.ProcessName, Compare))
-                : DomainUtilities.StartProcess(executeable, string.Join(" ", arguments));
+                : DomainUtilities.StartProcess(executeable, string.Join(" ", arguments), impersonation);
 
             // internal server error
             if (process?.MainWindowHandle == default && process.Handle == default && (process.SafeHandle.IsInvalid || process.SafeHandle.IsClosed))

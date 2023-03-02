@@ -1,14 +1,35 @@
-﻿using System;
+﻿/*
+ * CHANGE LOG - keep only last 5 threads
+ * 
+ * docs.microsoft
+ * https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-input
+ */
+using System;
 
 namespace UiaWebDriverServer.Contracts
 {
     public static class NativeEnums
     {
+        /// <summary>
+        /// The type of the input event.
+        /// </summary>
+        [Flags]
         public enum SendInputEventType
         {
+            /// <summary>
+            /// The event is a mouse event.
+            /// </summary>
             Mouse = 0,
+
+            /// <summary>
+            /// The event is a keyboard event.
+            /// </summary>
             Keyboard = 1,
-            Hardware = 2,
+
+            /// <summary>
+            /// The event is a hardware event.
+            /// </summary>
+            Hardware = 2
         }
 
         [Flags]

@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Security;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -113,6 +115,24 @@ namespace UiaWebDriverServer.Extensions
             stream.Read(bytes, 0, (int)stream.Length);
 
             return Convert.ToBase64String(bytes);
+        }
+
+        public static SecureString ConvertToSecureString(this string str)
+        {
+            // normalize
+            str = string.IsNullOrEmpty(str) ? string.Empty : str;
+
+            // setup
+            var securePassword = new SecureString();
+
+            // build
+            foreach (var character in str)
+            {
+                securePassword.AppendChar(character);
+            }
+
+            // get
+            return securePassword;
         }
 
         // Utilities

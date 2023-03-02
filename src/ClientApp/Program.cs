@@ -8,6 +8,37 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using UiaWebDriverServer.Contracts;
+using System.IO;
+using System.Security;
+
+
+// is directory (opens files explorer)
+var password = new SecureString();
+foreach (var character in "75uQX7jnC1")
+{
+    password.AppendChar(character);
+}
+var iProcess = new Process();
+iProcess.StartInfo.UseShellExecute = false;
+iProcess.StartInfo.FileName = "msedge.exe";
+iProcess.StartInfo.Arguments = "http://chsw.tasmc.corp/chameleon";
+iProcess.StartInfo.Domain = "tasmc1";
+iProcess.StartInfo.Password = password;
+iProcess.StartInfo.UserName = "UiPathRobotDoc";
+iProcess.StartInfo.WindowStyle = ProcessWindowStyle.Maximized;
+iProcess.Start();
+
+
+var automation = new CUIAutomation8();
+var condition1 = automation.CreatePropertyConditionEx(UIA_PropertyIds.UIA_NamePropertyId, "12835616", PropertyConditionFlags.PropertyConditionFlags_MatchSubstring | PropertyConditionFlags.PropertyConditionFlags_IgnoreCase);
+var condition2 = automation.CreatePropertyConditionEx(UIA_PropertyIds.UIA_NamePropertyId, "05/02/2023 14:35", PropertyConditionFlags.PropertyConditionFlags_MatchSubstring | PropertyConditionFlags.PropertyConditionFlags_IgnoreCase);
+var condition3 = automation.CreateAndConditionFromArray(new[] { condition1, condition2 });
+var element = automation.GetRootElement().FindFirst(TreeScope.TreeScope_Descendants, condition3);
+var linkCondition = automation.CreatePropertyConditionEx(UIA_PropertyIds.UIA_ControlTypePropertyId, UIA_ControlTypeIds.UIA_HyperlinkControlTypeId, PropertyConditionFlags.PropertyConditionFlags_IgnoreCase);
+var link = element.FindFirst(TreeScope.TreeScope_Children, linkCondition);
+var pattern = link.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) as IUIAutomationInvokePattern;
+pattern.Invoke();
+
 
 [DllImport("user32.dll")]
 static extern bool SetPhysicalCursorPos(int x, int y);

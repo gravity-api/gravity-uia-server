@@ -1,9 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿/*
+ * CHANGE LOG - keep only last 5 threads
+ * 
+ * docs.microsoft
+ * https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-hardwareinput
+ * https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput
+ * https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+ */
+using System;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UiaWebDriverServer.Contracts
 {
@@ -12,29 +16,130 @@ namespace UiaWebDriverServer.Contracts
         [StructLayout(LayoutKind.Sequential)]
         public struct Input
         {
-            public NativeEnums.SendInputEventType type;
-            public MouseInput mouseInput;
-            public KeyInput keyInput;
+            public int type;
+            public InputUnion union;
         }
 
+        [StructLayout(LayoutKind.Explicit)]
+        public struct InputUnion
+        {
+            [FieldOffset(0)]
+            public MouseInput mi;
+
+            [FieldOffset(0)]
+            public KeyInput ki;
+
+            [FieldOffset(0)]
+            public HardwareInput hi;
+        }
+
+        /// <summary>
+        /// Contains information about a simulated mouse event.
+        /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct MouseInput
         {
+            /// <summary>
+            /// The absolute position of the mouse, or the amount of motion since the 
+            /// last mouse event was generated, depending on the value of the dwFlags member.
+            /// Absolute data is specified as the x coordinate of the mouse; 
+            /// relative data is specified as the number of pixels moved.
+            /// </summary>
             public int dx;
+
+            /// <summary>
+            /// The absolute position of the mouse, or the amount of motion since the 
+            /// last mouse event was generated, depending on the value of the dwFlags member.
+            /// Absolute data is specified as the y coordinate of the mouse;
+            /// relative data is specified as the number of pixels moved.
+            /// </summary>
             public int dy;
+
+            /// <summary>
+            /// If dwFlags contains MOUSEEVENTF_WHEEL, then mouseData specifies the amount of wheel movement.
+            /// </summary>
             public uint mouseData;
-            public NativeEnums.MouseEvent dwFlags;
+
+            /// <summary>
+            /// A set of bit flags that specify various aspects of mouse motion and button clicks.
+            /// The bits in this member can be any reasonable combination of the following values.
+            /// </summary>
+            /// <remarks>Take from NativeEnums.MouseEvent</remarks>
+            public uint dwFlags;
+
+            /// <summary>
+            /// The time stamp for the event, in milliseconds.
+            /// If this parameter is 0, the system will provide its own time stamp.
+            /// </summary>
             public uint time;
+
+            /// <summary>
+            /// An additional value associated with the mouse event.
+            /// An application calls GetMessageExtraInfo to obtain this extra information.
+            /// </summary>
+            /// <see cref="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessageextrainfo"/>
             public IntPtr dwExtraInfo;
         }
 
+        /// <summary>
+        /// Contains information about a simulated keyboard event.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
         public struct KeyInput
         {
+            /// <summary>
+            /// A virtual-key code. The code must be a value in the range 1 to 254.
+            /// If the dwFlags member specifies KEYEVENTF_UNICODE, wVk must be 0.
+            /// </summary>
+            /// <see cref="https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"/>
             public ushort wVk;
+
+            /// <summary>
+            /// A hardware scan code for the key.
+            /// If dwFlags specifies KEYEVENTF_UNICODE, wScan specifies a Unicode character 
+            /// which is to be sent to the foreground application.
+            /// </summary>
             public ushort wScan;
-            public NativeEnums.KeyEvent dwFlags;
+
+            /// <summary>
+            /// Specifies various aspects of a keystroke (use NativeEnums.KeyEvent).
+            /// </summary>
+            public uint dwFlags;
+
+            /// <summary>
+            /// The time stamp for the event, in milliseconds.
+            /// If this parameter is zero, the system will provide its own time stamp.
+            /// </summary>
             public uint time;
+
+            /// <summary>
+            /// An additional value associated with the keystroke.
+            /// Use the GetMessageExtraInfo function to obtain this information.
+            /// </summary>
+            /// <see cref="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessageextrainfo"/>
             public IntPtr dwExtraInfo;
+        }
+
+        /// <summary>
+        /// Contains information about a simulated message generated by an input device other than a keyboard or mouse.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct HardwareInput
+        {
+            /// <summary>
+            /// The message generated by the input hardware.
+            /// </summary>
+            public uint uMsg;
+
+            /// <summary>
+            /// The low-order word of the lParam parameter for uMsg.
+            /// </summary>
+            public ushort wParamL;
+
+            /// <summary>
+            /// The high-order word of the lParam parameter for uMsg.
+            /// </summary>
+            public ushort wParamH;
         }
     }
 }

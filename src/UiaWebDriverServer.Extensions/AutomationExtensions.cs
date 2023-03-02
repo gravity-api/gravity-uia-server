@@ -22,6 +22,9 @@ using UIAutomationClient;
 
 using UiaWebDriverServer.Contracts;
 
+using static UiaWebDriverServer.Contracts.NativeEnums;
+using static UiaWebDriverServer.Contracts.NativeStructs;
+
 namespace UiaWebDriverServer.Extensions
 {
     public static partial class AutomationExtensions
@@ -42,6 +45,12 @@ namespace UiaWebDriverServer.Extensions
         #endregion
 
         #region *** Externals           ***
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetMessageExtraInfo();
+
         [DllImport("gdi32.dll")]
         private static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
 
@@ -362,6 +371,13 @@ namespace UiaWebDriverServer.Extensions
             return InvokeElement(element);
         }
 
+        public static void NativeClick(this IUIAutomationElement element, double scaleRatio)
+        {
+            var point = InvokeGetClickablePoint(scaleRatio, element);
+            SetPhysicalCursorPos(point.XPos, point.YPos);
+            InvokeNativeClick();
+        }
+
         /// <summary>
         /// Invokes a pattern based MouseClick action on the element. If not possible to use
         /// pattern, it will use native click.
@@ -403,7 +419,7 @@ namespace UiaWebDriverServer.Extensions
             }
             else if (isSelectable)
             {
-                InvokeSelectionItem(element);
+                SelectElement(element);
             }
             else if (isCords)
             {
@@ -414,6 +430,17 @@ namespace UiaWebDriverServer.Extensions
 
             // get
             return element;
+        }
+        #endregion
+
+        #region *** Element: Select     ***
+        /// <summary>
+        /// Select the element if possible.
+        /// </summary>
+        /// <param name="element">The element to select on.</param>
+        public static IUIAutomationElement Select(this IUIAutomationElement element)
+        {
+            return SelectElement(element);
         }
         #endregion
 
@@ -470,6 +497,129 @@ namespace UiaWebDriverServer.Extensions
             return session;
         }
         #endregion
+
+        #region *** Session: Inputs     ***
+        /// <summary>
+        /// Send a key stroke using a a modifier (e.g. alt, shift, CTRL).
+        /// </summary>
+        /// <param name="modifier">The modifier (e.g. alt, shift, CTRL).</param>
+        /// <param name="key">The key.</param>
+        public static void SendModifiedKey(this CUIAutomation8 _, string modifier, string key)
+        {
+            // locals
+            ushort GetKeyCode(string key)
+            {
+                // setup
+                var isCode = GetScanCodeMap().Any(i => i.Value.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+                // get
+                return isCode
+                    ? GetScanCodeMap().First(i => i.Value.Equals(key, StringComparison.OrdinalIgnoreCase)).Key
+                    : (ushort)0x00;
+            }
+
+            // build
+            var modifierCode = GetKeyCode(modifier);
+            var keyCode = GetKeyCode(key);
+            var inputs = Modify(modifierCode, keyCode).ToArray();
+
+            // invoke
+            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            Marshal.GetLastWin32Error();
+        }
+
+        /// <summary>
+        /// Synthesizes keystrokes, mouse motions, and button clicks.
+        /// </summary>
+        /// <param name="inputs">A collection of input objects.</param>
+        /// <returns>The number of events that it successfully inserted into the keyboard or mouse input stream.</returns>
+        /// <remarks>If the function returns zero, the input was already blocked by another thread.</remarks>
+        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 _, params Input[] inputs)
+        {
+            // invoke
+            var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            var errorCode = Marshal.GetLastWin32Error();
+
+            // get
+            return (numberOfevents, errorCode);
+        }
+
+        /// <summary>
+        /// Set the mouse position cursor.
+        /// </summary>
+        /// <param name="automation">Main <see cref="CUIAutomation8"/> object.</param>
+        /// <param name="x">The x position.</param>
+        /// <param name="y">The y position.</param>
+        /// <returns>Self reference.</returns>
+        public static CUIAutomation8 SetCursorPosition(this CUIAutomation8 automation, int x, int y)
+        {
+            SetPhysicalCursorPos(x, y);
+            return automation;
+        }
+
+        /// <summary>
+        /// Gets a collection of KeyboradInput based on an input string.
+        /// </summary>
+        /// <param name="input">The intput string.</param>
+        /// <returns>A collection of KeyboradInput.</returns>
+        public static IEnumerable<Input> GetInputs(this string input)
+        {
+            // setup
+            var map = GetScanCodeMap();
+            var inputs = new List<Input>();
+
+            // build: inputs
+            foreach (var item in input)
+            {
+                var (modified, modifier, keyCode) = GetModifiedInforamtion($"{item}");
+                if (modified)
+                {
+                    inputs.AddRange(Modify(modifier, keyCode));
+                    continue;
+                }
+
+                var wScan = map.Any(i => i.Value.Equals($"{item}", StringComparison.OrdinalIgnoreCase))
+                    ? map.First(i => i.Value.Equals($"{item}", StringComparison.OrdinalIgnoreCase)).Key
+                    : (ushort)0x00;
+                inputs.AddRange(new[]
+                {
+                    InvokeGetKeyboardInput(wScan, KeyEvent.KeyDown | KeyEvent.Scancode),
+                    InvokeGetKeyboardInput(wScan, KeyEvent.KeyUp | KeyEvent.Scancode)
+                });
+            }
+
+            // get
+            return inputs;
+        }
+
+        private static (bool Modified, ushort Modifier, ushort ModifiedKeyCode) GetModifiedInforamtion(string input)
+        {
+            // setup
+            var info = new List<(string Input, ushort Modifier, ushort ModifiedKeyCode)>();
+            info.AddRange(new (string Input, ushort Modifier, ushort ModifiedKeyCode)[]
+            {
+                (Input: ":", Modifier: 0x2A, ModifiedKeyCode: 0x27),
+                (Input: "@", Modifier: 0x2A, ModifiedKeyCode: 0x03)
+            });
+
+            // build
+            var isModified = info.Any(i => i.Input.Equals(input));
+            var modifier = isModified ? info.First(i => i.Input.Equals(input)).Modifier : (ushort)0x00;
+            var modifiedKeyCode = isModified ? info.First(i => i.Input.Equals(input)).ModifiedKeyCode : (ushort)0x00;
+
+            // get
+            return (isModified, modifier, modifiedKeyCode);
+        }
+        #endregion
+
+        public static ushort GetScanCode(this string key)
+        {
+            // get
+            var codes = GetScanCodeMap().Where(i => i.Value.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+            // get
+            return codes.Any() ? codes.First().Key : ushort.MaxValue;
+        }
 
         public static Element ConvertToElement(this IUIAutomationElement automationElement)
         {
@@ -849,13 +999,13 @@ namespace UiaWebDriverServer.Extensions
 
             // setup
             var x = (int)((element.CurrentBoundingRectangle.left + hDelta) / scaleRatio);
-            var y = (int)(element.CurrentBoundingRectangle.top + vDelta / scaleRatio);
+            var y = (int)((element.CurrentBoundingRectangle.top + vDelta) / scaleRatio);
 
             // get
             return new(xpos: x, ypos: y);
         }
 
-        private static IUIAutomationElement InvokeSelectionItem(this IUIAutomationElement element)
+        private static IUIAutomationElement SelectElement(this IUIAutomationElement element)
         {
             // get current pattern
             var p = element?.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId);
@@ -888,5 +1038,115 @@ namespace UiaWebDriverServer.Extensions
             mouse_event(MouseEventLeftDown, position.x, position.y, 0, 0);
             mouse_event(MouseEventLeftUp, position.x, position.y, 0, 0);
         }
+
+        private static IDictionary<ushort, string> GetScanCodeMap() => new Dictionary<ushort, string>
+        {
+            [0x01] = "Esc",
+            [0x02] = "1",
+            [0x03] = "2",
+            [0x04] = "3",
+            [0x05] = "4",
+            [0x06] = "5",
+            [0x07] = "6",
+            [0x08] = "7",
+            [0x09] = "8",
+            [0x0A] = "9",
+            [0x0B] = "0",
+            [0x0C] = "-",
+            [0x0D] = "=",
+            [0x0E] = "Backspace",
+            [0x0F] = "Tab",
+            [0x10] = "Q",
+            [0x11] = "W",
+            [0x12] = "E",
+            [0x13] = "R",
+            [0x14] = "T",
+            [0x15] = "Y",
+            [0x16] = "U",
+            [0x17] = "I",
+            [0x18] = "O",
+            [0x19] = "P",
+            [0x1A] = "[",
+            [0x1B] = "]",
+            [0x1C] = "Enter",
+            [0x1D] = "Ctrl",
+            [0x1E] = "A",
+            [0x1F] = "S",
+            [0x20] = "D",
+            [0x21] = "F",
+            [0x22] = "G",
+            [0x23] = "H",
+            [0x24] = "J",
+            [0x25] = "K",
+            [0x26] = "L",
+            [0x27] = ";",
+            [0x28] = "'",
+            [0x29] = "`",
+            [0x2A] = "LShift",
+            [0x2B] = @"\",
+            [0x2C] = "Z",
+            [0x2D] = "X",
+            [0x2E] = "C",
+            [0x2F] = "V",
+            [0x30] = "B",
+            [0x31] = "N",
+            [0x32] = "M",
+            [0x33] = ",",
+            [0x34] = ".",
+            [0x35] = "/",
+            [0x36] = "RShift",
+            [0x37] = "PrtSc",
+            [0x38] = "Alt",
+            [0x39] = " ",
+            [0x3A] = "CapsLock",
+            [0x3B] = "F1",
+            [0x3C] = "F2",
+            [0x3D] = "F3",
+            [0x3E] = "F4",
+            [0x3F] = "F5",
+            [0x40] = "F6",
+            [0x41] = "F7",
+            [0x42] = "F8",
+            [0x43] = "F9",
+            [0x44] = "F10",
+            [0x45] = "Num",
+            [0x46] = "Scroll",
+            [0x47] = "Home",
+            [0x48] = "Up",
+            [0x49] = "PgUp",
+            [0x4A] = "-",
+            [0x4B] = "Left",
+            [0x4C] = "Center",
+            [0x4D] = "Right",
+            [0x4E] = "+",
+            [0x4F] = "End",
+            [0x50] = "Down",
+            [0x51] = "PgDn",
+            [0x52] = "Ins",
+            [0x53] = "Del"
+        };
+
+        private static IEnumerable<Input> Modify(ushort modifierCode, ushort keyCode) => new[]
+        {
+            InvokeGetKeyboardInput(modifierCode, KeyEvent.KeyDown | KeyEvent.Scancode),
+            InvokeGetKeyboardInput(keyCode, KeyEvent.KeyDown | KeyEvent.Scancode),
+            InvokeGetKeyboardInput(keyCode, KeyEvent.KeyUp | KeyEvent.Scancode),
+            InvokeGetKeyboardInput(modifierCode, KeyEvent.KeyUp | KeyEvent.Scancode),
+        };
+
+        private static Input InvokeGetKeyboardInput(ushort wScan, KeyEvent flags) => new()
+        {
+            type = (int)SendInputEventType.Keyboard,
+            union = new InputUnion
+            {
+                ki = new KeyInput
+                {
+                    wVk = 0,
+                    wScan = wScan,
+                    dwFlags = (uint)(flags),
+                    dwExtraInfo = GetMessageExtraInfo()
+                }
+            }
+        };
     }
 }
