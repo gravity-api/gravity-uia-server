@@ -12,23 +12,6 @@ using System.IO;
 using System.Security;
 
 
-// is directory (opens files explorer)
-var password = new SecureString();
-foreach (var character in "75uQX7jnC1")
-{
-    password.AppendChar(character);
-}
-var iProcess = new Process();
-iProcess.StartInfo.UseShellExecute = false;
-iProcess.StartInfo.FileName = "msedge.exe";
-iProcess.StartInfo.Arguments = "http://chsw.tasmc.corp/chameleon";
-iProcess.StartInfo.Domain = "tasmc1";
-iProcess.StartInfo.Password = password;
-iProcess.StartInfo.UserName = "UiPathRobotDoc";
-iProcess.StartInfo.WindowStyle = ProcessWindowStyle.Maximized;
-iProcess.Start();
-
-
 var automation = new CUIAutomation8();
 var condition1 = automation.CreatePropertyConditionEx(UIA_PropertyIds.UIA_NamePropertyId, "12835616", PropertyConditionFlags.PropertyConditionFlags_MatchSubstring | PropertyConditionFlags.PropertyConditionFlags_IgnoreCase);
 var condition2 = automation.CreatePropertyConditionEx(UIA_PropertyIds.UIA_NamePropertyId, "05/02/2023 14:35", PropertyConditionFlags.PropertyConditionFlags_MatchSubstring | PropertyConditionFlags.PropertyConditionFlags_IgnoreCase);
