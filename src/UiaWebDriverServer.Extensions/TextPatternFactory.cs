@@ -42,7 +42,8 @@ namespace UiaWebDriverServer.Extensions
         private static string GetByTextChildPattern(object pattern)
         {
             var textChildPattern = (IUIAutomationTextChildPattern)pattern;
-            return textChildPattern.TextRange.GetText(-1);
+            var text = textChildPattern.TextRange.GetText(int.MaxValue);
+            return text;
         }
 
         [UiaConstant(UIA_PatternIds.UIA_TextEditPatternId)]
