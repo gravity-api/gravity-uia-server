@@ -2,14 +2,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using System.Xml.XPath;
 
 using UiaDriverServer.Attributes;
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
 
 using UIAutomationClient;
@@ -19,8 +19,8 @@ namespace UiaDriverServer.Controllers
     [ApiController]
     public class ElementController : UiaController
     {
-        // POST wd/hub/session/[id]/element
-        // POST session/[id]/element
+        // POST /wd/hub/session/{session}/element
+        // POST /session/{session}/element
         [Route("wd/hub/session/{s}/element")]
         [Route("session/{s}/element")]
         [HttpPost]
@@ -34,7 +34,7 @@ namespace UiaDriverServer.Controllers
             }
 
             // flat point element (element map by x, y for not discoverable element or flat action)
-            var e = GetFlatPointElement(locationStrategy);
+            var e = locationStrategy.GetFlatPointElement();
             if (e != null)
             {
                 // update state
@@ -46,22 +46,36 @@ namespace UiaDriverServer.Controllers
                 return Ok(new { Value = v });
             }
 
+            // root
+            var (element, node, runtime) = session.GetFromRoot(locationStrategy);
+            if (element != null && node != null)
+            {
+                // get
+                return Get(session, runtime, element, node);
+            }
+
             // parse runtime-id
-            var domRuntime = GetDomRuntime(session, locationStrategy);
+            var domRuntime = session.GetRuntime(locationStrategy);
             if (domRuntime == null)
             {
                 return NotFound();
             }
 
             // get element
-            var dElement = session.Dom.XPathSelectElement($"//*[@id='{domRuntime}']");
-            var aElement = Get(session, domRuntime);
+            element = session.GetElementById(domRuntime);
+            node = session.Dom.XPathSelectElement($"//*[@id='{domRuntime}']");
 
+            // get
+            return Get(session, domRuntime, element, node);
+        }
+
+        private IActionResult Get(Session session, string domRuntime, IUIAutomationElement element, XNode node)
+        {
             // update state
             session.Elements[domRuntime] = new Element
             {
-                UIAutomationElement = aElement,
-                Node = dElement
+                UIAutomationElement = element,
+                Node = node
             };
 
             // value response
@@ -69,11 +83,12 @@ namespace UiaDriverServer.Controllers
             return Ok(new { Value = value });
         }
 
-        // GET wd/hub/session/{session id}/element/{element id}/text
-        // GET /session/[id]/element/[id]/text
+        // GET /wd/hub/session/{session}/element/{element}/text
+        // GET /session/{session}/element/{element}/text
         [Route("wd/hub/session/{s}/element/{e}/text")]
         [Route("session/{s}/element/{e}/text")]
         [HttpGet]
+        [SuppressMessage("Major Code Smell", "S3011:Reflection should not be used to increase accessibility of classes, methods, or fields", Justification = "As design. This method have access to internal resource.")]
         public IActionResult Text(string s, string e)
         {
             // exit conditions
@@ -122,47 +137,25 @@ namespace UiaDriverServer.Controllers
             return Ok(new { Value = text });
         }
 
-        private static Element GetFlatPointElement(LocationStrategy locationStrategy)
+        // GET /wd/hub/session/{s}/element/{e}/attribute/{name}
+        // GET /session/{s}/element/{e}/attribute/{name}
+        [Route("wd/hub/session/{s}/element/{e}/attribute/{name}")]
+        [Route("session/{s}/element/{e}/attribute/{name}")]
+        public IActionResult Attribute(string s, string e, string name)
         {
-            const string P1 = @"(?i)//cords\[\d+,\d+]";
-            const string P2 = @"\[\d+,\d+]";
-
-            // setup conditions
-            var isCords = Regex.IsMatch(locationStrategy.Value, P1);
-            if (!isCords)
+            // exit conditions
+            var elementFound = GetSession(s)?.Elements?.ContainsKey(e) == true;
+            if (!elementFound)
             {
-                return null;
+                return NotFound();
             }
 
-            // load cords
-            var cords = JsonSerializer.Deserialize<int[]>(Regex.Match(locationStrategy.Value, P2).Value);
-            return new Element { ClickablePoint = new ClickablePoint(xpos: cords[0], ypos: cords[1]) };
-        }
+            // setup
+            var element = GetSession(s).Elements[e].Node;
+            var attribute = XElement.Parse($"{element}").Attribute(name)?.Value;
 
-        private static string GetDomRuntime(Session session, LocationStrategy locationStrategy)
-        {
-            var domElement = session.Dom.XPathSelectElement(locationStrategy.Value);
-            return domElement?.Attribute("id").Value;
-        }
-
-        private static IUIAutomationElement Get(Session session, string domRuntime)
-        {
-            // get container
-            var containerElement = session.GetApplicationRoot();
-
-            // create finding condition
-            var c = GetRuntimeCondition(session, domRuntime);
-            return containerElement.FindFirst(TreeScope.TreeScope_Descendants, c);
-        }
-
-        private static IUIAutomationCondition GetRuntimeCondition(Session session, string domRuntime)
-        {
-            // shortcuts
-            var runtime = Utilities.GetRuntime(domRuntime);
-            const int pid = UIA_PropertyIds.UIA_RuntimeIdPropertyId;
-
-            // get condition
-            return session.Automation.CreatePropertyCondition(pid, runtime);
+            // get
+            return Ok(new { Value = attribute });
         }
     }
 }

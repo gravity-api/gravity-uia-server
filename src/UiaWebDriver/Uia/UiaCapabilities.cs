@@ -11,7 +11,7 @@ namespace OpenQA.Selenium.Uia
         /// <summary>
         /// initializes a new instance of the <see cref="DesiredCapabilities"/> class
         /// </summary>
-        /// <param name="browser">name of the browser e.g. firefox, internet explorer, safari</param>
+        /// <param name="browser">name of the browser e.g. Firefox, Internet Explorer, Safari</param>
         /// <param name="version">version of the browser</param>
         /// <param name="platform">the platform it works on</param>
         public UiaCapabilities(string browser, string version, Platform platform)
@@ -57,7 +57,6 @@ namespace OpenQA.Selenium.Uia
 
             // platform handler
             var raw = keyValue.Value;
-            var rawAsPlatform = raw as Platform;
 
             //---- parse from string
             if (raw is string rawAsString)
@@ -65,7 +64,7 @@ namespace OpenQA.Selenium.Uia
                 SetCapability(CapabilityType.Platform, FromString(rawAsString));
             }
             //---- parse from platform
-            else if (rawAsPlatform != null)
+            else if (raw is Platform rawAsPlatform)
             {
                 SetCapability(CapabilityType.Platform, rawAsPlatform);
             }

@@ -26,7 +26,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using UIAutomationClient;
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 using UiaDriverServer.Extensions;
 using System.Text.Json;
 
@@ -61,7 +61,20 @@ namespace UiaDriverServer.Components
         /// <returns>virtual DOM</returns>
         public XDocument Create()
         {
-            var element = session.GetApplicationRoot();
+            return InvokeCreate(session.GetApplicationRoot());
+        }
+
+        /// <summary>
+        /// create virtual DOM for the current application
+        /// </summary>
+        /// <returns>virtual DOM</returns>
+        public XDocument Create(IUIAutomationElement element)
+        {
+            return InvokeCreate(element);
+        }
+
+        private XDocument InvokeCreate(IUIAutomationElement element)
+        {
             GenerateDOM(element);
             var xdocument = $"<root>{domWriter}</root>";
             return XDocument.Parse(xdocument);
@@ -79,8 +92,7 @@ namespace UiaDriverServer.Components
             domWriter.Append('<').Append(tagName).Append(' ').Append(attributes).AppendLine("> ");
 
             // exit routine
-            const TreeScope scope = TreeScope.TreeScope_Children;
-            var elements = element.FindAll(scope, allCondition);
+            var elements = element.FindAll(session.TreeScope, allCondition);
             if (elements.Length == 0)
             {
                 domWriter.Append("</").Append(tagName).AppendLine(">");
@@ -103,7 +115,7 @@ namespace UiaDriverServer.Components
             var id = JsonSerializer.Serialize(runtime);
             attributes.Add("id", id);
 
-            // initialize xml row
+            // initialize XML row
             var xmlNode = new List<string>();
             foreach (var item in attributes)
             {

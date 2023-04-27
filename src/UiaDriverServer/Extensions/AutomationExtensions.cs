@@ -2,7 +2,7 @@
  * CHANGE LOG - keep only last 5 threads
  * 
  * 2019-02-07
- *    - modify: better xml comments & document reference
+ *    - modify: better XML comments & document reference
  * 
  * docs.microsoft
  * https://docs.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.automationelementinformation?view=netframework-4.7.2
@@ -14,25 +14,33 @@
  * codemag.com
  * https://www.codemag.com/article/0810122/Creating-UI-Automation-Client-Applications
  */
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
+using System.Xml.Linq;
 using System.Xml.XPath;
-
-using UIAutomationClient;
 
 using UiaDriverServer.Attributes;
 using UiaDriverServer.Components;
 using UiaDriverServer.Contracts;
-using UiaDriverServer.Dto;
+
+using UIAutomationClient;
 
 namespace UiaDriverServer.Extensions
 {
-    internal static class AutomationExtensions
+    internal static partial class AutomationExtensions
     {
         // constants
         private const int MouseEventLeftDown = 0x02;
@@ -40,14 +48,10 @@ namespace UiaDriverServer.Extensions
 
         // native calls
         [DllImport("user32.dll")]
-        public static extern bool GetCursorPos(out tagPOINT lpPoint);
+        private static extern bool GetCursorPos(out tagPOINT lpPoint);
 
         [DllImport("user32.dll")]
         private static extern bool SetPhysicalCursorPos(int x, int y);
-
-        [Obsolete("This function has been superseded. Use SendInput instead.")]
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
@@ -55,26 +59,12 @@ namespace UiaDriverServer.Extensions
         [DllImport("user32.dll")]
         private static extern IntPtr GetMessageExtraInfo();
 
-        #region *** Session     ***
-        /// <summary>
-        /// Synthesizes keystrokes, mouse motions, and button clicks.
-        /// </summary>
-        /// <param name="automation">The <see cref="CUIAutomation8"/> to send input to.</param>
-        /// <param name="inputs">A collection of input objects.</param>
-        /// <returns>The number of events that it successfully inserted into the keyboard or mouse input stream.</returns>
-        /// <remarks>If the function returns zero, the input was already blocked by another thread.</remarks>
-        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Used as 'Monkey Patch'")]
-        [SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "False positive on IDE0060")]
-        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 automation,  params Input[] inputs)
-        {
-            // invoke
-            var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
-            var errorCode = Marshal.GetLastWin32Error();
+        // native calls: obsolete
+        [Obsolete("This function has been superseded. Use SendInput instead.")]
+        [DllImport("user32.dll")]
+        private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
 
-            // get
-            return (numberOfevents, errorCode);
-        }
-
+        #region *** Session      ***
         /// <summary>
         /// Gets child element from root
         /// </summary>
@@ -85,6 +75,220 @@ namespace UiaDriverServer.Extensions
         {
             var conditions = automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
             return automation.GetRootElement().FindFirst(TreeScope.TreeScope_Children, conditions);
+        }
+
+        /// <summary>
+        /// Gets root element from file explorer instance.
+        /// </summary>
+        /// <param name="session">The session to use.</param>
+        /// <returns>An <see cref="IUIAutomationElement"/> interface.</returns>
+        public static IUIAutomationElement GetApplicationRoot(this Session session)
+        {
+            return session.Application.GetNameOrFile().Contains("EXPLORER.EXE", StringComparison.OrdinalIgnoreCase)
+                ? GetRootFromFileExplorer(session)
+                : GetRootFromApplication(session);
+        }
+
+        private static IUIAutomationElement GetRootFromFileExplorer(Session session)
+        {
+            // bad request
+            if (!Directory.Exists(session.Application.StartInfo.Arguments))
+            {
+                return null;
+            }
+
+            // iteration
+            IUIAutomationElement rootElement = null;
+            var timeout = DateTime.Now.Add(session.Timeout);
+
+            while(DateTime.Now < timeout)
+            {
+                rootElement = GetFromFileExplorer(session);
+
+                if (rootElement != null)
+                {
+                    session.Runtime = rootElement.GetRuntimeId().Cast<int>().ToArray();
+                    return rootElement;
+                }
+
+                Thread.Sleep(100);
+            }
+
+            // get
+            return rootElement;
+        }
+
+        private static IUIAutomationElement GetFromFileExplorer(Session session)
+        {
+            // constants
+            const int NameProperty = UIA_PropertyIds.UIA_NamePropertyId;
+            const int ControlTypeProperty = UIA_PropertyIds.UIA_ControlTypePropertyId;
+            const int ControlTypeWindow = UIA_ControlTypeIds.UIA_WindowControlTypeId;
+            const int ControlTypeToolBar = UIA_ControlTypeIds.UIA_ToolBarControlTypeId;
+
+            // setup
+            var folder = session.Application.StartInfo.Arguments;
+            var folderLast = new DirectoryInfo(folder).Name;
+
+            // setup: windows - chain condition
+            var windowCondition = session.Automation.CreatePropertyCondition(ControlTypeProperty, ControlTypeWindow);
+            var windowPartialNameCondition = session.Automation.CreatePropertyCondition(NameProperty, folderLast);
+            var windowFullNameCondition = session.Automation.CreatePropertyCondition(NameProperty, folder);
+            var windowNameCondition = session.Automation.CreateOrCondition(windowFullNameCondition, windowPartialNameCondition);
+            var windowRootCondition = session.Automation.CreateAndCondition(windowCondition, windowNameCondition);
+
+            // setup: tool-bar - chain condition
+            var toolBarCondition = session.Automation.CreatePropertyCondition(ControlTypeProperty, ControlTypeToolBar);
+
+            // collect: windows
+            var window = session.Automation.GetRootElement().FindFirst(TreeScope.TreeScope_Descendants, windowRootCondition);
+
+            // find the first explorer window based on the application
+            var toolBars = window.FindAll(TreeScope.TreeScope_Descendants, toolBarCondition);
+            var names = new List<string>();
+
+            for (int toolBar = 0; toolBar < toolBars.Length; toolBar++)
+            {
+                names.Add($"{toolBars.GetElement(toolBar)?.GetCurrentPropertyValue(NameProperty)}");
+            }
+
+            var isWindow = names.Any(i => i.Contains(folder, StringComparison.OrdinalIgnoreCase));
+
+            // not found
+            return isWindow ? window : null;
+        }
+
+        private static IUIAutomationElement GetRootFromApplication(Session session)
+        {
+            // iteration
+            IUIAutomationElement rootElement = null;
+            var timeout = DateTime.Now.Add(session.Timeout);
+
+            while (DateTime.Now < timeout)
+            {
+                var condition = GetCondition(session);
+                var root = session.Automation.GetRootElement();
+                rootElement = root.FindFirst(TreeScope.TreeScope_Descendants, condition);
+
+                if (rootElement != null)
+                {
+                    session.Runtime = rootElement.GetRuntimeId().Cast<int>().ToArray();
+                    return rootElement;
+                }
+
+                Thread.Sleep(100);
+            }
+
+            // get
+            return null;
+        }
+
+        private static IUIAutomationCondition GetCondition(Session session)
+        {
+            // setup conditions
+            var isRuntime = session.Runtime?.Any() == true;
+            var isHandle = session.Application.MainWindowHandle != default;
+
+            // setup
+            var id = isRuntime
+                ? UIA_PropertyIds.UIA_RuntimeIdPropertyId
+                : UIA_PropertyIds.UIA_NativeWindowHandlePropertyId;
+            if (!isRuntime && !isHandle)
+            {
+                id = UIA_PropertyIds.UIA_ProcessIdPropertyId;
+            }
+
+            // get condition
+            if (isRuntime)
+            {
+                return session.Automation.CreatePropertyCondition(id, session.Runtime.ToArray());
+            }
+            return isHandle
+                ? session.Automation.CreatePropertyCondition(id, session.Application.MainWindowHandle)
+                : session.Automation.CreatePropertyCondition(id, session.Application.Id);
+        }
+
+        /// <summary>
+        /// Gets the native status indicator.
+        /// </summary>
+        /// <returns><see cref="true"/> if native; <see cref="false"/> if not.</returns>
+        public static bool GetIsNative(this Session session)
+        {
+            // members
+            const string Key = UiaCapability.UseNativeEvents;
+            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
+
+            // setup
+            var capabilites = session.Capabilities;
+            var isNative = capabilites.ContainsKey(Key);
+
+            // get
+            return isNative && $"{capabilites[Key]}".Equals("true", Compare);
+        }
+
+        /// <summary>
+        /// Gets the file explorer indicator.
+        /// </summary>
+        /// <returns><see cref="true"/> if FileExplorer; <see cref="false"/> if not.</returns>
+        public static bool GetIsFileExplorer(this Session session)
+        {
+            try
+            {
+                return session
+                    .Application?
+                    .StartInfo?
+                    .FileName?
+                    .Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) != false;
+            }
+            catch (Exception e) when (e != null)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Synthesizes keystrokes, mouse motions, and button clicks.
+        /// </summary>
+        /// <param name="inputs">A collection of input objects.</param>
+        /// <returns>The number of events that it successfully inserted into the keyboard or mouse input stream.</returns>
+        /// <remarks>If the function returns zero, the input was already blocked by another thread.</remarks>
+        public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 _, params Input[] inputs)
+        {
+            // invoke
+            var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            var errorCode = Marshal.GetLastWin32Error();
+
+            // get
+            return (numberOfevents, errorCode);
+        }
+
+        /// <summary>
+        /// Send a key stroke using a a modifier (e.g. alt, shift, CTRL).
+        /// </summary>
+        /// <param name="modifier">The modifier (e.g. alt, shift, CTRL).</param>
+        /// <param name="key">The key.</param>
+        public static void SendModifiedKey(this CUIAutomation8 _, string modifier, string key)
+        {
+            // locals
+            ushort GetKeyCode(string key)
+            {
+                // setup
+                var isCode = GetScanCodeMap().Any(i => i.Value.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+                // get
+                return isCode
+                    ? GetScanCodeMap().First(i => i.Value.Equals(key, StringComparison.OrdinalIgnoreCase)).Key
+                    : (ushort)0x00;
+            }
+
+            // build
+            var modifierCode = GetKeyCode(modifier);
+            var keyCode = GetKeyCode(key);
+            var inputs = Modify(modifierCode, keyCode).ToArray();
+
+            // invoke
+            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            Marshal.GetLastWin32Error();
         }
 
         /// <summary>
@@ -106,6 +310,15 @@ namespace UiaDriverServer.Extensions
         /// <param name="session">The session to delete.</param>
         public static void Delete(this Session session)
         {
+            // file explorer child session
+            if (session.GetIsFileExplorer())
+            {
+                var appRoot = session.GetApplicationRoot();
+                var pattern = appRoot.GetCurrentPattern(UIA_PatternIds.UIA_WindowPatternId);
+                (pattern != null ? (IUIAutomationWindowPattern)pattern : null)?.Close();
+            }
+
+            // dispose
             session?.Application?.Kill();
             session?.Application?.Dispose();
         }
@@ -122,7 +335,7 @@ namespace UiaDriverServer.Extensions
 
             // setup conditions
             var isKey = session.Capabilities.ContainsKey(DevMode);
-            var isDev = isKey && (bool)session.Capabilities[DevMode];
+            var isDev = isKey && ((JsonElement)session.Capabilities[DevMode]).GetBoolean();
 
             // invoke
             return InvokeRefreshDom(session, isDev);
@@ -149,7 +362,7 @@ namespace UiaDriverServer.Extensions
 
             // setup
             var dom = new DomFactory(session).Create();
-            
+
             // not created
             if (dom == null)
             {
@@ -177,26 +390,57 @@ namespace UiaDriverServer.Extensions
         /// Gets an <see cref="IUIAutomationElement"/> by a serialized runtime id.
         /// </summary>
         /// <param name="session">Session to search.</param>
-        /// <param name="domRuntime">Serialized runtime id to find by.</param>
+        /// <param name="runtime">Serialized runtime id to find by.</param>
         /// <returns>A <see cref="IUIAutomationElement"/>.</returns>
-        public static IUIAutomationElement GetElementById(this Session session, string domRuntime)
+        public static IUIAutomationElement GetElementById(this Session session, string runtime)
         {
             // get container
             var containerElement = session.GetApplicationRoot();
 
             // create finding condition
-            var runtime = Utilities.GetRuntime(domRuntime);
-            const int pid = UIA_PropertyIds.UIA_RuntimeIdPropertyId;
-            var c = session.Automation.CreatePropertyCondition(pid, runtime);
+            var domRuntime = Utilities.GetRuntime(runtime).ToArray();
+            var c = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, domRuntime);
 
             // get element
             return containerElement.FindFirst(TreeScope.TreeScope_Descendants, c);
         }
+
+        // TODO: build cache
+        /// <summary>
+        /// Gets an <see cref="IUIAutomationElement"/> from root scope (desktop).
+        /// </summary>
+        /// <param name="session">Session to search.</param>
+        /// <param name="locationStrategy"></param>
+        /// <returns>A <see cref="IUIAutomationElement"/>.</returns>
+        public static (IUIAutomationElement, XNode, string) GetFromRoot(this Session session, LocationStrategy locationStrategy)
+        {
+            // bad request
+            if (!locationStrategy.Value.StartsWith("//root"))
+            {
+                return (null, null, null);
+            }
+            locationStrategy.Value = locationStrategy.Value.Replace("//root", string.Empty);
+
+            // build
+            var dom = new DomFactory(session).Create(session.Automation.GetRootElement());
+            var domElement = dom.XPathSelectElement(locationStrategy.Value);
+            var domRuntime = domElement?.Attribute("id").Value;
+
+            // get container
+            var containerElement = session.Automation.GetRootElement();
+
+            // create finding condition
+            var runtime = Utilities.GetRuntime(domRuntime).ToArray();
+            var c = session.Automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, runtime);
+
+            // get element
+            return (containerElement.FindFirst(TreeScope.TreeScope_Descendants, c), domElement, domRuntime);
+        }
         #endregion
 
-        #region *** Validation  ***
+        #region *** Validation   ***
         /// <summary>
-        /// Assert if element in interactable and can accept a given text.
+        /// Assert if element in interact-able and can accept a given text.
         /// </summary>
         /// <param name="element">The element to evaluate</param>
         /// <param name="text">The string to accept into the element</param>
@@ -240,11 +484,11 @@ namespace UiaDriverServer.Extensions
         }
         #endregion
 
-        #region *** Element     ***
+        #region *** Element      ***
         /// <summary>
-        /// Try to get a mouse clickable point of the element.
+        /// Try to get a mouse click-able point of the element.
         /// </summary>
-        /// <param name="element">The Element to get clickable point for.</param>
+        /// <param name="element">The Element to get click-able point for.</param>
         /// <returns>A ClickablePoint object.</returns>
         public static ClickablePoint GetClickablePoint(this IUIAutomationElement element)
         {
@@ -272,22 +516,13 @@ namespace UiaDriverServer.Extensions
 
         /// <summary>
         /// Invokes a pattern based MouseClick action on the element. If not possible to use
-        /// pattern, it will use native click. 
+        /// pattern, it will use native click.
         /// </summary>
         /// <param name="element">The element to click on.</param>
-        /// <remarks>This action wll attempt to evaluate the center of the element and click on it.</remarks>
+        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
         public static IUIAutomationElement Click(this IUIAutomationElement element)
         {
             return InvokeClick(element, isNative: false);
-        }
-
-        /// <summary>
-        /// Select the element if possible.
-        /// </summary>
-        /// <param name="element">The element to select on.</param>
-        public static IUIAutomationElement Select(this IUIAutomationElement element)
-        {
-            return InvokeSelectionItem(element);
         }
 
         /// <summary>
@@ -295,13 +530,13 @@ namespace UiaDriverServer.Extensions
         /// </summary>
         /// <param name="element">The element to click on.</param>
         /// <param name="isNative">Set to <see cref="true"/> to invoke native click.</param>
-        /// <remarks>This action wll attempt to evaluate the center of the element and click on it.</remarks>
+        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
         public static IUIAutomationElement Click(this IUIAutomationElement element, bool isNative)
         {
             return InvokeClick(element, isNative);
         }
 
-        public static IUIAutomationElement InvokeClick(IUIAutomationElement element, bool isNative)
+        private static IUIAutomationElement InvokeClick(IUIAutomationElement element, bool isNative)
         {
             // native
             if (isNative)
@@ -321,13 +556,13 @@ namespace UiaDriverServer.Extensions
             InvokeApproveElement(element);
 
             // setup conditions
-            var isInvoke = element.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) != null;
+            var isInvoke = element?.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) != null;
             var isExpandCollapse = !isInvoke && element.GetCurrentPattern(UIA_PatternIds.UIA_ExpandCollapsePatternId) != null;
             var isSelectable = !isInvoke && !isExpandCollapse && element.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId) != null;
             var isFocus = element.CurrentIsKeyboardFocusable == 1;
 
             // action factory
-            if ((isNative && isFocus) || (!isInvoke && !isExpandCollapse && !isSelectable && isFocus))
+            if (isFocus || (!isInvoke && !isExpandCollapse && !isSelectable && isFocus))
             {
                 return InvokeNativeClick(element);
             }
@@ -370,6 +605,15 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
+        /// Select the element if possible.
+        /// </summary>
+        /// <param name="element">The element to select on.</param>
+        public static IUIAutomationElement Select(this IUIAutomationElement element)
+        {
+            return InvokeSelectionItem(element);
+        }
+
+        /// <summary>
         /// Sends the given keys to the active application, and then waits for the messages
         /// to be processed.
         /// </summary>
@@ -399,7 +643,6 @@ namespace UiaDriverServer.Extensions
             void SetValue()
             {
                 element.SetFocus();
-                // System.Windows.Forms.SendKeys.SendWait(text);
             }
 
             // get value pattern
@@ -430,7 +673,7 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
-        /// generates xml tag-name for this automation element
+        /// Generates XML tag-name for this automation element
         /// </summary>
         /// <param name="element">element to generate tag-name for</param>
         /// <returns>element tag-name</returns>
@@ -462,6 +705,7 @@ namespace UiaDriverServer.Extensions
         /// </summary>
         /// <param name="element"><see cref="IUIAutomationElement"/> to get text from.</param>
         /// <returns>The innerText of <see cref="IUIAutomationElement"/>.</returns>
+        [SuppressMessage("Major Code Smell", "S3011:Reflection should not be used to increase accessibility of classes, methods, or fields", Justification = "As design. This method have access to internal resource.")]
         public static string GetText(this IUIAutomationElement element)
         {
             // supported text-patterns
@@ -507,9 +751,31 @@ namespace UiaDriverServer.Extensions
         {
             return InvokeGetPatterns(element);
         }
+
+        /// <summary>
+        /// Gets a flat (x, y) clickable point (//cords[x, y]) wrapped in an Element.
+        /// </summary>
+        /// <param name="locationStrategy">LocationStrategy object to get cords from.</param>
+        /// <returns>An Element object with a flat clickable point.</returns>
+        public static Element GetFlatPointElement(this LocationStrategy locationStrategy)
+        {
+            const string P1 = @"(?i)//cords\[\d+,\d+]";
+            const string P2 = @"\[\d+,\d+]";
+
+            // setup conditions
+            var isCords = Regex.IsMatch(locationStrategy.Value, P1);
+            if (!isCords)
+            {
+                return null;
+            }
+
+            // load cords
+            var cords = JsonSerializer.Deserialize<int[]>(Regex.Match(locationStrategy.Value, P2).Value);
+            return new Element { ClickablePoint = new ClickablePoint(xpos: cords[0], ypos: cords[1]) };
+        }
         #endregion
 
-        #region *** Information ***
+        #region *** Information  ***
         /// <summary>
         /// Gets the <see cref="IUIAutomationElement"/> information as a collection of key/value.
         /// </summary>
@@ -557,6 +823,85 @@ namespace UiaDriverServer.Extensions
             ["Orientation".ToCamelCase()] = $"{info.CurrentOrientation}",
             ["ProcessId".ToCamelCase()] = $"{info.CurrentProcessId}"
         };
+
+        /// <summary>
+        /// Gets a keyboard input object.
+        /// </summary>
+        /// <param name="wScan">The key scan code.</param>
+        /// <param name="flags">A collection of flags to use.</param>
+        /// <returns>A keyboard input object.</returns>
+        public static Input GetKeyboardInput(ushort wScan, KeyEventF flags) => InvokeGetKeyboardInput(wScan, flags);
+
+        /// <summary>
+        /// Gets a collection of KeyboradInput based on an input string.
+        /// </summary>
+        /// <param name="input">The intput string.</param>
+        /// <returns>A collection of KeyboradInput.</returns>
+        public static IEnumerable<Input> GetInputs(this string input)
+        {
+            // setup
+            var map = GetScanCodeMap();
+            var inputs = new List<Input>();
+
+            // build: inputs
+            foreach (var item in input)
+            {
+                var (modified, modifier, keyCode) = GetModifiedInforamtion($"{item}");
+                if (modified)
+                {
+                    inputs.AddRange(Modify(modifier, keyCode));
+                    continue;
+                }
+
+                var wScan = map.Any(i => i.Value.Equals($"{item}", StringComparison.OrdinalIgnoreCase))
+                    ? map.First(i => i.Value.Equals($"{item}", StringComparison.OrdinalIgnoreCase)).Key
+                    : (ushort)0x00;
+                inputs.AddRange(new[]
+                {
+                    InvokeGetKeyboardInput(wScan, KeyEventF.KeyDown | KeyEventF.Scancode),
+                    InvokeGetKeyboardInput(wScan, KeyEventF.KeyUp | KeyEventF.Scancode)
+                });
+            }
+
+            // get
+            return inputs;
+        }
+        #endregion
+
+        #region *** Capabilities ***
+        /// <summary>
+        /// Assert if the capabilities are compliant with UiA Driver.
+        /// </summary>
+        /// <param name="capabilities">The capabilites to assert.</param>
+        /// <returns><see cref="true"/> if compliant; <see cref="false"/> if not.</returns>
+        public static (IActionResult Response, bool Result) AssertCapabilities(this Capabilities capabilities)
+        {
+            // setup
+            const string message = "You must provide [{0}] capability";
+            var response = new ContentResult
+            {
+                ContentType = MediaTypeNames.Text.Plain,
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+
+            // shortcuts
+            var c = capabilities.DesiredCapabilities;
+
+            // evaluate
+            if (!c.ContainsKey(UiaCapability.Application))
+            {
+                response.Content = string.Format(message, UiaCapability.Application);
+                return (response, false);
+            }
+
+            // setup
+            response.StatusCode = StatusCodes.Status200OK;
+            response.Content = string.Empty;
+            response.ContentType = MediaTypeNames.Application.Json;
+
+            // get
+            return (response, true);
+        }
         #endregion
 
         // Utilities
@@ -567,22 +912,43 @@ namespace UiaDriverServer.Extensions
             var x = point.x;
             var y = point.y;
 
-            // ok
+            // OK
             if ((point.x == 0 && point.y != 0) || (point.x != 0 && point.y == 0) || (point.x != 0 && point.y != 0))
             {
                 return new ClickablePoint(x, y);
             }
 
             // setup
-            var left = element.CurrentBoundingRectangle.left;
-            var right = element.CurrentBoundingRectangle.right;
-            var top = element.CurrentBoundingRectangle.top;
-            var bottom = element.CurrentBoundingRectangle.bottom;
-            x = (left + right) / 2;
-            y = (top + bottom) / 2;
+            var p = element.CurrentBoundingRectangle;
+            var input = new NativeStructs.Input
+            {
+                type = NativeEnums.SendInputEventType.Mouse,
+                mouseInput = new NativeStructs.MouseInput
+                {
+                    dx = 0,
+                    dy = 0,
+                    mouseData = 0,
+                    dwFlags = NativeEnums.MouseEvent.Absolute | NativeEnums.MouseEvent.RightDown | NativeEnums.MouseEvent.Move,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero,
+                },
+            };
+
+            var primaryScreen = Screen.PrimaryScreen;
+            input.mouseInput.dx = Convert.ToInt32((p.left + 1 - primaryScreen.Bounds.Left) * 65536 / primaryScreen.Bounds.Width);
+            input.mouseInput.dy = Convert.ToInt32((p.top + 1 - primaryScreen.Bounds.Top) * 65536 / primaryScreen.Bounds.Height);
+            //input.mouseInput.dwFlags = NativeEnums.MouseEventFlags.Absolute | NativeEnums.MouseEventFlags.LeftUp | NativeEnums.MouseEventFlags.Move;
+            //NativeMethods.SendInput(1, ref input, Marshal.SizeOf(input));
+
+            //var left = element.CurrentBoundingRectangle.left;
+            //var right = element.CurrentBoundingRectangle.right;
+            //var top = element.CurrentBoundingRectangle.top;
+            //var bottom = element.CurrentBoundingRectangle.bottom;
+            //x = (left + right) / 2;
+            //y = (top + bottom) / 2;
 
             // get
-            return new ClickablePoint(x, y);
+            return new ClickablePoint(input.mouseInput.dx, input.mouseInput.dy);
         }
 
         private static IEnumerable<int> InvokeGetPatterns(IUIAutomationElement element)
@@ -669,11 +1035,10 @@ namespace UiaDriverServer.Extensions
         private static IUIAutomationElement InvokeSelectionItem(this IUIAutomationElement element)
         {
             // get current pattern
-            var p = element.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId);
-            var pattern = (IUIAutomationSelectionItemPattern)p;
+            var p = element?.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId);
 
             // invoke
-            if (pattern == null)
+            if (p is not IUIAutomationSelectionItemPattern pattern)
             {
                 return element;
             }
@@ -689,6 +1054,192 @@ namespace UiaDriverServer.Extensions
 
             // get
             return element;
+        }
+
+        private static Input InvokeGetKeyboardInput(ushort wScan, KeyEventF flags) => new()
+        {
+            type = (int)InputType.Keyboard,
+            u = new InputUnion
+            {
+                ki = new KeyboardInput
+                {
+                    wVk = 0,
+                    wScan = wScan,
+                    dwFlags = (uint)(flags),
+                    dwExtraInfo = GetMessageExtraInfo()
+                }
+            }
+        };
+
+        private static (bool Modified, ushort Modifier, ushort ModifiedKeyCode) GetModifiedInforamtion(string input)
+        {
+            // setup
+            var info = new List<(string Input, ushort Modifier, ushort ModifiedKeyCode)>();
+            info.AddRange(new (string Input, ushort Modifier, ushort ModifiedKeyCode)[]
+            {
+                (Input: ":", Modifier: 0x2A, ModifiedKeyCode: 0x27),
+                (Input: "@", Modifier: 0x2A, ModifiedKeyCode: 0x03)
+            });
+
+            // build
+            var isModified = info.Any(i => i.Input.Equals(input));
+            var modifier = isModified ? info.First(i => i.Input.Equals(input)).Modifier : (ushort)0x00;
+            var modifiedKeyCode = isModified ? info.First(i => i.Input.Equals(input)).ModifiedKeyCode : (ushort)0x00;
+
+            // get
+            return (isModified, modifier, modifiedKeyCode);
+        }
+
+        private static IEnumerable<Input> Modify(ushort modifierCode, ushort keyCode)
+        {
+            return new[]
+            {
+                InvokeGetKeyboardInput(modifierCode, KeyEventF.KeyDown | KeyEventF.Scancode),
+                InvokeGetKeyboardInput(keyCode, KeyEventF.KeyDown | KeyEventF.Scancode),
+                InvokeGetKeyboardInput(keyCode, KeyEventF.KeyUp | KeyEventF.Scancode),
+                InvokeGetKeyboardInput(modifierCode, KeyEventF.KeyUp | KeyEventF.Scancode),
+            };
+        }
+
+        private static IDictionary<ushort, string> GetScanCodeMap() => new Dictionary<ushort, string>
+        {
+            [0x01] = "Esc",
+            [0x02] = "1",
+            [0x03] = "2",
+            [0x04] = "3",
+            [0x05] = "4",
+            [0x06] = "5",
+            [0x07] = "6",
+            [0x08] = "7",
+            [0x09] = "8",
+            [0x0A] = "9",
+            [0x0B] = "0",
+            [0x0C] = "-",
+            [0x0D] = "=",
+            [0x0E] = "Backspace",
+            [0x0F] = "Tab",
+            [0x10] = "Q",
+            [0x11] = "W",
+            [0x12] = "E",
+            [0x13] = "R",
+            [0x14] = "T",
+            [0x15] = "Y",
+            [0x16] = "U",
+            [0x17] = "I",
+            [0x18] = "O",
+            [0x19] = "P",
+            [0x1A] = "[",
+            [0x1B] = "]",
+            [0x1C] = "Enter",
+            [0x1D] = "Ctrl",
+            [0x1E] = "A",
+            [0x1F] = "S",
+            [0x20] = "D",
+            [0x21] = "F",
+            [0x22] = "G",
+            [0x23] = "H",
+            [0x24] = "J",
+            [0x25] = "K",
+            [0x26] = "L",
+            [0x27] = ";",
+            [0x28] = "'",
+            [0x29] = "`",
+            [0x2A] = "LShift",
+            [0x2B] = @"\",
+            [0x2C] = "Z",
+            [0x2D] = "X",
+            [0x2E] = "C",
+            [0x2F] = "V",
+            [0x30] = "B",
+            [0x31] = "N",
+            [0x32] = "M",
+            [0x33] = ",",
+            [0x34] = ".",
+            [0x35] = "/",
+            [0x36] = "RShift",
+            [0x37] = "PrtSc",
+            [0x38] = "Alt",
+            [0x39] = " ",
+            [0x3A] = "CapsLock",
+            [0x3B] = "F1",
+            [0x3C] = "F2",
+            [0x3D] = "F3",
+            [0x3E] = "F4",
+            [0x3F] = "F5",
+            [0x40] = "F6",
+            [0x41] = "F7",
+            [0x42] = "F8",
+            [0x43] = "F9",
+            [0x44] = "F10",
+            [0x45] = "Num",
+            [0x46] = "Scroll",
+            [0x47] = "Home",
+            [0x48] = "Up",
+            [0x49] = "PgUp",
+            [0x4A] = "-",
+            [0x4B] = "Left",
+            [0x4C] = "Center",
+            [0x4D] = "Right",
+            [0x4E] = "+",
+            [0x4F] = "End",
+            [0x50] = "Down",
+            [0x51] = "PgDn",
+            [0x52] = "Ins",
+            [0x53] = "Del"
+        };
+
+        private static class NativeStructs
+        {
+            [StructLayout(LayoutKind.Sequential)]
+            public struct Input
+            {
+                public NativeEnums.SendInputEventType type;
+                public MouseInput mouseInput;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MouseInput
+            {
+                public int dx;
+                public int dy;
+                public uint mouseData;
+                public NativeEnums.MouseEvent dwFlags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
+        }
+
+        private static class NativeEnums
+        {
+            internal enum SendInputEventType
+            {
+                Mouse = 0,
+                Keyboard = 1,
+                Hardware = 2,
+            }
+
+            [Flags]
+            internal enum MouseEvent : uint
+            {
+                None = 0x0000,
+                Move = 0x0001,
+                LeftDown = 0x0002,
+                LeftUp = 0x0004,
+                RightDown = 0x0008,
+                RightUp = 0x0010,
+                MiddleDown = 0x0020,
+                MiddleUp = 0x0040,
+                XDown = 0x0080,
+                XUp = 0x0100,
+                Wheel = 0x0800,
+                Absolute = 0x8000,
+            }
+        }
+
+        private static partial class NativeMethods
+        {
+            [LibraryImport("user32.dll", SetLastError = true)]
+            internal static partial uint SendInput(uint nInputs, ref NativeStructs.Input pInputs, int cbSize);
         }
     }
 }

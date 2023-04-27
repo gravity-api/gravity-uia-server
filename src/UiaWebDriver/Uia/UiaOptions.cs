@@ -16,7 +16,7 @@ namespace OpenQA.Selenium.Uia
     public class UiaOptions : DriverOptions
     {
         // the dictionary of capabilities
-        private readonly UiaCapabilities capabilities = new UiaCapabilities();
+        private readonly UiaCapabilities capabilities = new();
 
         /// <summary>
         /// initialize an object for managing options specific to a browser driver
@@ -63,22 +63,6 @@ namespace OpenQA.Selenium.Uia
         /// Prefer native events over patterns when possible.
         /// </summary>
         public bool UseNativeEvents { get; set; } = false;
-
-        /// <summary>
-        /// provides a means to add additional capabilities not yet added as type safe options
-        /// for the specific browser driver
-        /// </summary>
-        /// <param name="capabilityName">the name of the capability to add</param>
-        /// <param name="capabilityValue">the value of the capability to add</param>
-        [Obsolete("Use the temporary AddAdditionalOption method or the browser-specific method for adding additional options")]
-        public override void AddAdditionalCapability(string capabilityName, object capabilityValue)
-        {
-            if (string.IsNullOrEmpty(capabilityName))
-            {
-                throw new ArgumentException("capability name may not be null an empty string", capabilityName);
-            }
-            capabilities[capabilityName] = capabilityValue;
-        }
 
         /// <summary>
         /// Turn the capabilities into an desired capability

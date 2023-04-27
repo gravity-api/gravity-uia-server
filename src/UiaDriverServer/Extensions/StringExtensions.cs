@@ -1,18 +1,29 @@
 ﻿/*
  * CHANGE LOG - keep only last 5 threads
- * 
- * 2019-02-07
- *    - modify: better xml comments & document reference
  */
 using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
+using UIAutomationClient;
+
 namespace UiaDriverServer.Extensions
 {
     internal static class StringExtensions
     {
+        public static TreeScope ConvertToTreeScope(this string treeScope) => treeScope.ToUpper() switch
+        {
+            "NONE" => TreeScope.TreeScope_None,
+            "ANCESTORS" => TreeScope.TreeScope_Ancestors,
+            "CHILDREN" => TreeScope.TreeScope_Children,
+            "DESCENDANTS" => TreeScope.TreeScope_Descendants,
+            "ELEMENT" => TreeScope.TreeScope_Element,
+            "PARENT" => TreeScope.TreeScope_Parent,
+            "SUBTREE" => TreeScope.TreeScope_Subtree,
+            _ => TreeScope.TreeScope_Descendants
+        };
+
         /// <summary>
         /// converts to camel case
         /// Location_ID => LocationId, and testLEFTSide => TestLeftSide
@@ -25,7 +36,7 @@ namespace UiaDriverServer.Extensions
         }
 
         /// <summary>
-        /// parse illegal xml chars
+        /// parse illegal XML chars
         /// </summary>
         /// <param name="s">string to convert</param>
         /// <returns>converted string</returns>

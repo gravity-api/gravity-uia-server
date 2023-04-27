@@ -1,11 +1,18 @@
-﻿using System;
+﻿/*
+ * CHANGE LOG - keep only last 5 threads
+ */
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 using UIAutomationClient;
 
@@ -111,6 +118,63 @@ namespace UiaDriverServer.Extensions
                 }
             }
             return string.Empty;
+        }
+
+        /// <summary>
+        /// start an interactive process.
+        /// </summary>
+        /// <param name="fileName">The application or document to start.</param>
+        /// <param name="arguments">The set of command-line arguments to use when starting the application.</param>
+        /// <returns>A new instance of the <see cref="Process"/> class.</returns>
+        public static Process StartProcess(string fileName,  string arguments)
+        {
+            // setup conditions
+            var isDirectory = Directory.Exists(fileName);
+
+            // build process
+            var startInfo = isDirectory
+                ? new ProcessStartInfo { FileName = "explorer.exe", Arguments = fileName }
+                : new ProcessStartInfo { FileName = fileName, Arguments = arguments };
+
+            var process = new Process
+            {
+                StartInfo = startInfo
+            };
+            process.Start();
+            Thread.Sleep(3000);
+            return process;
+        }
+
+        /// <summary>
+        /// Close the driver with exit code 0.
+        /// </summary>
+        public static void CloseDriver() => Task.Run(() =>
+        {
+            Trace.TraceInformation("Shutting down...");
+            Thread.Sleep(1000);
+            Environment.Exit(0);
+        });
+
+        /// <summary>
+        /// Render UiA Driver logo.
+        /// </summary>
+        public static void RednerLogo()
+        {
+            Console.WriteLine("  ▄▄▄▄▄▄▄     ▄▄▄▄▄▄   ▄▄▄▄▄         ▄▄▄▄▄         ");
+            Console.WriteLine(" ████████     ██████  █████▀        ███████▄       ");
+            Console.WriteLine("  ██████       ████     ▄▄▄▄        ████████▄      ");
+            Console.WriteLine("  ██████       ████  ▄██████       ▄███▀██████     ");
+            Console.WriteLine("  ██████       ████   ██████      ▄███▀ ▀██████    ");
+            Console.WriteLine("  ██████       ████   ██████     ▄██████████████   ");
+            Console.WriteLine("  ███████▄   ▄▄████   ██████    ▄███▀▀▀▀▀▀▀██████  ");
+            Console.WriteLine("   ▀█████████████▀   ████████ ████████   ██████████");
+            Console.WriteLine("      ▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀     ▀▀▀▀▀▀▀▀ ");
+            Console.WriteLine(" WebDriver implementation for Windows native.      ");
+            Console.WriteLine();
+            Console.WriteLine(" Powered by IUIAutomation: https://docs.microsoft.com/en-us/windows/win32/api/_winauto/");
+            Console.WriteLine(" GitHub Project URL:       https://github.com/gravity-api/gravity-uia-server");
+            Console.WriteLine();
+            Console.WriteLine();
         }
     }
 }

@@ -1,23 +1,29 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31402.337
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaClient", "UiaClient\UiaClient.csproj", "{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriver", "UiaWebDriver\UiaWebDriver.csproj", "{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaDriverServer", "UiaDriverServer\UiaDriverServer.csproj", "{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{E690D8DE-6E65-4610-9A77-E764B0CD42AB}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{E690D8DE-6E65-4610-9A77-E764B0CD42AB}"
 	ProjectSection(SolutionItems) = preProject
 		..\build\azure_pipelines.yaml = ..\build\azure_pipelines.yaml
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{CCDCA6D9-A6C0-4DF6-AA64-C8257D651C0D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".documents", ".documents", "{CCDCA6D9-A6C0-4DF6-AA64-C8257D651C0D}"
 	ProjectSection(SolutionItems) = preProject
 		..\README.md = ..\README.md
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer", "UiaWebDriverServer\UiaWebDriverServer.csproj", "{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Domain", "UiaWebDriverServer.Domain\UiaWebDriverServer.Domain.csproj", "{2D9DEE7C-A19A-4D6B-A09D-83DC6F6CFB3D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Extensions", "UiaWebDriverServer.Extensions\UiaWebDriverServer.Extensions.csproj", "{D527FF9E-A5C6-45C7-A960-CB36B894E9D2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Contracts", "UiaWebDriverServer.Contracts\UiaWebDriverServer.Contracts.csproj", "{1DBE6A11-389A-4493-B5CE-CCE910F196EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientApp", "ClientApp\ClientApp.csproj", "{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,18 +31,30 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{444F97B2-DCA8-4136-BBD7-C6A821C5C8C7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E6CC9AD2-978C-4BCA-BA05-B411E4B26096}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D9DEE7C-A19A-4D6B-A09D-83DC6F6CFB3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D9DEE7C-A19A-4D6B-A09D-83DC6F6CFB3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D9DEE7C-A19A-4D6B-A09D-83DC6F6CFB3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D9DEE7C-A19A-4D6B-A09D-83DC6F6CFB3D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D527FF9E-A5C6-45C7-A960-CB36B894E9D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D527FF9E-A5C6-45C7-A960-CB36B894E9D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D527FF9E-A5C6-45C7-A960-CB36B894E9D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D527FF9E-A5C6-45C7-A960-CB36B894E9D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

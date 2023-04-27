@@ -13,7 +13,7 @@ namespace UiaDriverServer.Contracts
     {
         [FieldOffset(0)]
         public MouseInput mi;
-        
+
         [FieldOffset(0)]
         public KeyboardInput ki;
         

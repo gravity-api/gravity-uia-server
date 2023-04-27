@@ -1,47 +1,51 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net5.0-windows</TargetFramework>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net7.0-windows</TargetFrameworks>
+		<UseWindowsForms>true</UseWindowsForms>
+		<UseWindowsAutomation>true</UseWindowsAutomation>
+		<OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
-    <PackageReference Include="System.Management" Version="5.0.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
+		<PackageReference Include="System.Management" Version="5.0.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <COMReference Include="UIAutomationBlockingCoreLib.dll">
-      <Guid>ea39b853-5769-4937-8ece-736de4f469bc</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-    </COMReference>
-    <COMReference Include="UIA.dll">
-      <Guid>930299ce-9965-4dec-b0f4-a54848d4b667</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-    </COMReference>
-    <COMReference Include="UIAutomationClient.dll">
-      <Guid>944de083-8fb8-45cf-bcb7-c477acb2f897</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-    </COMReference>
-    <COMReference Include="UIAutomationCrossBitnessHookLib.dll">
-      <Guid>8acc2016-04a3-4343-b8e1-1870e35d6a41</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-    </COMReference>
-  </ItemGroup>
+	<ItemGroup>
+		<COMReference Include="UIAutomationBlockingCoreLib.dll">
+			<Guid>ea39b853-5769-4937-8ece-736de4f469bc</Guid>
+			<VersionMajor>1</VersionMajor>
+			<VersionMinor>0</VersionMinor>
+			<WrapperTool>tlbimp</WrapperTool>
+			<Lcid>0</Lcid>
+			<Isolated>false</Isolated>
+		</COMReference>
+		<COMReference Include="UIA.dll">
+			<Guid>930299ce-9965-4dec-b0f4-a54848d4b667</Guid>
+			<VersionMajor>1</VersionMajor>
+			<VersionMinor>0</VersionMinor>
+			<WrapperTool>tlbimp</WrapperTool>
+			<Lcid>0</Lcid>
+			<Isolated>false</Isolated>
+		</COMReference>
+		<COMReference Include="UIAutomationClient.dll">
+			<Guid>944de083-8fb8-45cf-bcb7-c477acb2f897</Guid>
+			<VersionMajor>1</VersionMajor>
+			<VersionMinor>0</VersionMinor>
+			<WrapperTool>tlbimp</WrapperTool>
+			<Lcid>0</Lcid>
+			<Isolated>false</Isolated>
+		</COMReference>
+		<COMReference Include="UIAutomationCrossBitnessHookLib.dll">
+			<Guid>8acc2016-04a3-4343-b8e1-1870e35d6a41</Guid>
+			<VersionMajor>1</VersionMajor>
+			<VersionMinor>0</VersionMinor>
+			<WrapperTool>tlbimp</WrapperTool>
+			<Lcid>0</Lcid>
+			<Isolated>false</Isolated>
+		</COMReference>
+	</ItemGroup>
 
 </Project>

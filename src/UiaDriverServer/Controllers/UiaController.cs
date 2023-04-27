@@ -4,11 +4,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 
-using UiaDriverServer.Dto;
+using UiaDriverServer.Contracts;
 
 namespace UiaDriverServer.Controllers
 {
-    // TODO: migrate to DI container with mananged object and remove inherit.
+    // TODO: migrate to DI container with managed object and remove inherit.
     public abstract class UiaController : ControllerBase
     {
         // members: state
@@ -30,9 +30,13 @@ namespace UiaDriverServer.Controllers
         /// <returns>session information object</returns>
         internal static Session GetSession(string id)
         {
-            if (!sessions.ContainsKey(id))
+            if (!sessions.ContainsKey(id) && string.IsNullOrEmpty(id))
             {
                 return null;
+            }
+            if (!sessions.ContainsKey(id) && !string.IsNullOrEmpty(id))
+            {
+                return new Session { SessionId = id };
             }
             return sessions[id];
         }

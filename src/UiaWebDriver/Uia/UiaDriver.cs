@@ -69,25 +69,6 @@ namespace OpenQA.Selenium.Uia
         {
             return capabilitiesToConvert.ToDictionary<UiaCapabilities>(true);
         }
-
-        /// <summary>
-        /// gets the capabilities as a dictionary supporting legacy drivers
-        /// </summary>
-        /// <param name="legacyCapabilities">the dictionary to return</param>
-        /// <returns>a dictionary consisting of the capabilities requested</returns>
-        /// <remarks>this method is only transitional. do not rely on it. it will be removed once
-        /// browser driver capability formats stabilize</remarks>
-        protected override Dictionary<string, object> GetLegacyCapabilitiesDictionary(ICapabilities legacyCapabilities)
-        {
-            return legacyCapabilities.ToDictionary<UiaCapabilities>(false);
-        }
-
-        # pragma warning disable 
-        private void AddCustomUiaCommand(string commandName, string method, string resourcePath)
-        {
-            var commandInfoToAdd = new CommandInfo(method, resourcePath);
-            CommandExecutor.CommandInfoRepository.TryAddCommand(commandName, commandInfoToAdd);
-        }
         #pragma warning restore
     }
 }
