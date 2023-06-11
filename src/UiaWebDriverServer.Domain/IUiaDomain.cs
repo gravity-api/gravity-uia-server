@@ -16,6 +16,8 @@ namespace UiaWebDriverServer.Domain
 
         IElementRepository ElementsRepostiroy { get; }
 
+        IDocumentRepository DocumentRepository { get; }
+
         public Session GetSession(string id);
     }
 }
