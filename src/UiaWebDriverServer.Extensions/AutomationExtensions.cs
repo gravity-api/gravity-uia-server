@@ -624,7 +624,8 @@ namespace UiaWebDriverServer.Extensions
         public static Element ConvertToElement(this IUIAutomationElement automationElement)
         {
             // setup
-            var id = string.IsNullOrEmpty(automationElement.CurrentAutomationId)
+            var automationId = automationElement.CurrentAutomationId;
+            var id = string.IsNullOrEmpty(automationId)
                 ? $"{Guid.NewGuid()}"
                 : automationElement.CurrentAutomationId;
             

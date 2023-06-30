@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -16,6 +17,7 @@ using System.Xml.XPath;
 using UIAutomationClient;
 
 using UiaWebDriverServer.Contracts;
+using UiaWebDriverServer.Domain.Extensions;
 using UiaWebDriverServer.Extensions;
 
 namespace UiaWebDriverServer.Domain.Application
@@ -31,9 +33,6 @@ namespace UiaWebDriverServer.Domain.Application
 
         [GeneratedRegex(@"(?<=\[@\w+=('|"")).*(?=('|"")])")]
         private static partial Regex GetPropertyValueSegmentPattern();
-
-        [GeneratedRegex(@"(?<![\/\.])\(?\/")]
-        private static partial Regex GetHierarchyPattern();
 
         [GeneratedRegex(@"(?<=\[)\d+(?=])")]
         private static partial Regex GetElementIndexPattern();
@@ -68,15 +67,15 @@ namespace UiaWebDriverServer.Domain.Application
 
             foreach (var segment in segments)
             {
-                var (statusCode, element) = FindElement(session: s, string.Empty, locationStrategy: new()
+                var (statusCode, elements) = FindElements(session: s, string.Empty, locationStrategy: new()
                 {
                     Using = "xpath",
                     Value = segment
                 });
 
-                if(statusCode == StatusCodes.Status200OK)
+                if (statusCode == StatusCodes.Status200OK && elements.Any())
                 {
-                    return (statusCode, element);
+                    return (statusCode, elements.First());
                 }
             }
 
@@ -89,7 +88,43 @@ namespace UiaWebDriverServer.Domain.Application
             throw new NotImplementedException();
         }
 
-        private static (int Status, Element Element) FindElement(Session session, string element, LocationStrategy locationStrategy)
+        public (int Status, IEnumerable< Element> Elements) FindElements(string session, LocationStrategy locationStrategy)
+        {
+            // not found
+            if (!_sessions.ContainsKey(session))
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            // setup
+            var s = _sessions[session];
+            var segments = locationStrategy.Value.Split("|", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            // bad request
+            if (segments == null || segments.Length == 0)
+            {
+                return (StatusCodes.Status400BadRequest, default);
+            }
+
+            foreach (var segment in segments)
+            {
+                var (statusCode, element) = FindElements(session: s, string.Empty, locationStrategy: new()
+                {
+                    Using = "xpath",
+                    Value = segment
+                });
+
+                if (statusCode == StatusCodes.Status200OK)
+                {
+                    return (statusCode, element);
+                }
+            }
+
+            // get
+            return (StatusCodes.Status200OK, Array.Empty<Element>());
+        }
+
+        private static (int Status, IEnumerable<Element> Elements) FindElements(Session session, string element, LocationStrategy locationStrategy)
         {
             // not implemented
             if (locationStrategy.Using != LocationStrategy.Xpath)
@@ -104,25 +139,81 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // get by Cords
-            var elementByCords = GetByCords(session, locationStrategy);
-            if (elementByCords.Status == StatusCodes.Status200OK)
+            var (status, driverElement) = GetByCords(session, locationStrategy);
+            if (status == StatusCodes.Status200OK)
             {
-                return elementByCords;
+                return (status, new[] { driverElement });
             }
 
             // get by path
             return GetByProperty(session, locationStrategy);
         }
 
-        private static (int Status, Element Element) GetByProperty(Session session, LocationStrategy locationStrategy)
+        private static (int Status, IEnumerable<Element> Elements) GetByProperty(Session session, LocationStrategy locationStrategy)
+        {
+            // setup
+            var (isRoot, hierarchy) = GetLocatorHierarchy(locationStrategy);
+
+            // bad request
+            if (!hierarchy.Any())
+            {
+                return (StatusCodes.Status400BadRequest, default);
+            }
+
+            // find element
+            var rootElement = isRoot ? new CUIAutomation8().GetRootElement() : session.ApplicationRoot;
+            var automationElements = GetElementBySegment(new CUIAutomation8(), rootElement, hierarchy.First());
+
+            // not found
+            if (!automationElements.Any())
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            // find
+            foreach (var pathSegment in hierarchy.Skip(1))
+            {
+                var collection = new List<IUIAutomationElement>();
+                foreach (var automationElement in automationElements)
+                {
+                    var range = GetElementBySegment(new CUIAutomation8(), automationElement, pathSegment);
+                    if (range == null || !range.Any())
+                    {
+                        continue;
+                    }
+                    collection.AddRange(range);
+                }
+                automationElements = collection;
+            }
+
+            // not found
+            if (automationElements == null || !automationElements.Any())
+            {
+                return (StatusCodes.Status404NotFound, Array.Empty<Element>());
+            }
+
+            // OK
+            var elements = automationElements.Select(i => i.ConvertToElement()).ToArray();
+            foreach (var element in elements)
+            {
+                session.Elements[element.Id] = element;
+            }
+
+            // get
+            return (StatusCodes.Status200OK, elements);
+        }
+
+        [SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Keep it simple.")]
+        private static (bool FromDesktop, IEnumerable<string> Hierarchy) GetLocatorHierarchy(LocationStrategy locationStrategy)
         {
             // constants
             const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
+            const RegexOptions RegexOptions = RegexOptions.IgnoreCase | RegexOptions.Singleline;
 
             // setup conditions
             var values = Regex.Matches(locationStrategy.Value, @"(?<==').+?(?=')").Select(i => i.Value).ToArray();
-            var isRoot = locationStrategy.Value.StartsWith("/root", Compare);
-            var xpath = isRoot
+            var fromDesktop = Regex.IsMatch(locationStrategy.Value, @"^(\(+)?\/root", RegexOptions);
+            var xpath = fromDesktop
                 ? locationStrategy.Value.Replace("/root", string.Empty, Compare)
                 : locationStrategy.Value;
 
@@ -133,10 +224,10 @@ namespace UiaWebDriverServer.Domain.Application
                 tokens[$"value_token_{i}"] = values[i];
                 xpath = xpath.Replace(values[i], $"value_token_{i}");
             }
-            
+
             // setup
-            var hierarchy = GetHierarchyPattern()
-                .Split(xpath)
+            var hierarchy = Regex
+                .Split(xpath, @"(?<![\/\.])\(?\/")
                 .Where(i => !string.IsNullOrEmpty(i))
                 .ToArray();
 
@@ -149,42 +240,11 @@ namespace UiaWebDriverServer.Domain.Application
                 }
             }
 
-            // bad request
-            if (hierarchy.Length == 0)
-            {
-                return (StatusCodes.Status400BadRequest, default);
-            }
-
-            // find element
-            var rootElement = isRoot ? new CUIAutomation8().GetRootElement() : session.ApplicationRoot;
-            var automationElement = GetElementBySegment(new CUIAutomation8(), rootElement, hierarchy[0]);
-
-            // not found
-            if(automationElement == default)
-            {
-                return (StatusCodes.Status404NotFound, default);
-            }
-
-            // iterate
-            foreach (var pathSegment in hierarchy.Skip(1))
-            {
-                automationElement = GetElementBySegment(new CUIAutomation8(), automationElement, pathSegment);
-                if(automationElement == default)
-                {
-                    return (StatusCodes.Status404NotFound, default);
-                }
-            }
-
-            // OK
-            var element = automationElement.ConvertToElement();
-            session.Elements[element.Id] = element;
-
             // get
-            return (StatusCodes.Status200OK, element);
+            return (fromDesktop, hierarchy);
         }
 
-        private static IUIAutomationElement GetElementBySegment(
-            CUIAutomation8 session,
+        private static IEnumerable<IUIAutomationElement> GetElementBySegment(CUIAutomation8 session,
             IUIAutomationElement rootElement,
             string pathSegment)
         {
@@ -197,7 +257,7 @@ namespace UiaWebDriverServer.Domain.Application
             var scope = isDescendants ? TreeScope.TreeScope_Descendants : TreeScope.TreeScope_Children;
             IUIAutomationCondition condition;
 
-            if(controlTypeCondition == default && propertyCondition != default)
+            if (controlTypeCondition == default && propertyCondition != default)
             {
                 condition = propertyCondition;
             }
@@ -221,16 +281,16 @@ namespace UiaWebDriverServer.Domain.Application
             // get single
             if (!isIndex)
             {
-                return rootElement.FindFirst(scope, condition);
+                return rootElement.FindElements(condition, scope);
             }
 
             // get by index
-            var elements = rootElement.FindAll(scope, condition);
+            var elements = rootElement.FindElements(condition, scope);
 
             // get
-            return elements.Length == 0
-                ? default
-                : elements.GetElement(indexOut - 1 < 0 ? 0 : indexOut - 1);
+            return elements?.Any() == false
+                ? Array.Empty<IUIAutomationElement>()
+                : new[] { elements.ElementAt(indexOut - 1 < 0 ? 0 : indexOut - 1) };
         }
 
         private static (int Status, Element Element) GetByCords(Session session, LocationStrategy locationStrategy)
@@ -257,7 +317,6 @@ namespace UiaWebDriverServer.Domain.Application
         private static IUIAutomationCondition GetControlTypeCondition(CUIAutomation8 session, string pathSegment)
         {
             // constants
-            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_IgnoreCase;
             const BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Static;
             const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
 
@@ -276,9 +335,7 @@ namespace UiaWebDriverServer.Domain.Application
             var typeSegment = GetTypeSegmentPattern().Match(pathSegment).Value;
 
             // setup
-            var conditionFlag = typeSegment.StartsWith("partial", Compare)
-                ? ConditionFlags | PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
-                : ConditionFlags;
+            var isPartial = typeSegment.StartsWith("partial", Compare);
             typeSegment = typeSegment.Replace("partial", string.Empty, Compare);
             var controlTypeId = GetControlTypeId(typeSegment);
 
@@ -288,15 +345,19 @@ namespace UiaWebDriverServer.Domain.Application
                 return default;
             }
 
+            // setup
+            var condition = isPartial
+                ? session.CreatePropertyConditionEx(UIA_PropertyIds.UIA_ControlTypePropertyId, controlTypeId, PropertyConditionFlags.PropertyConditionFlags_MatchSubstring)
+                : session.CreatePropertyCondition(UIA_PropertyIds.UIA_ControlTypePropertyId, controlTypeId);
+
             // get
-            return session
-                .CreatePropertyConditionEx(UIA_PropertyIds.UIA_ControlTypePropertyId, controlTypeId, conditionFlag);
+            return condition;
         }
 
+        [SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Keep it simple.")]
         private static IUIAutomationCondition GetPropertyCondition(CUIAutomation8 session, string pathSegment)
         {
             // constants
-            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_IgnoreCase;
             const BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Static;
             const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
 
@@ -315,20 +376,13 @@ namespace UiaWebDriverServer.Domain.Application
             var conditions = new List<IUIAutomationCondition>();
             var segments = Regex.Match(pathSegment, @"(?<=\[).*(?=\])").Value.Split(" and ").Select(i => $"[{i}]");
 
-            if (segments.Count() > 1)
-            {
-                var a = "break here!";
-            }
-
             // build
             foreach (var segment in segments)
             {
                 var typeSegment = GetPropertyTypeSegmentPattern().Match(segment).Value;
 
                 // setup
-                var conditionFlag = typeSegment.StartsWith("partial", Compare)
-                    ? ConditionFlags | PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
-                    : ConditionFlags;
+                var isPartial = typeSegment.StartsWith("partial", Compare);
                 typeSegment = typeSegment.Replace("partial", string.Empty, Compare);
                 var valueSegment = GetPropertyValueSegmentPattern().Match(segment).Value;
                 var propertyId = GetPropertyId(typeSegment);
@@ -340,7 +394,9 @@ namespace UiaWebDriverServer.Domain.Application
                 }
 
                 // get
-                var condition = session.CreatePropertyConditionEx(propertyId, valueSegment, conditionFlag);
+                var condition = isPartial
+                    ? session.CreatePropertyConditionEx(propertyId, valueSegment, PropertyConditionFlags.PropertyConditionFlags_MatchSubstring)
+                    : session.CreatePropertyCondition(propertyId, valueSegment);
 
                 // set
                 conditions.Add(condition);
