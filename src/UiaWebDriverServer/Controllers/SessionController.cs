@@ -6,9 +6,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-using System.Net.Http;
 using System.Net.Mime;
-using System.Text;
 using System.Text.Json;
 
 using UiaWebDriverServer.Contracts;

@@ -3,8 +3,6 @@
  * 
  * RESSOURCES
  */
-using System.Collections.Generic;
-
 using UiaWebDriverServer.Contracts;
 using UiaWebDriverServer.Domain.Application;
 

@@ -69,7 +69,7 @@ namespace UiaWebDriverServer.Domain.Application
 
             // setup
             var session = Sessions[id];
-            var elementsXml = DomFactory.Create(session.ApplicationRoot, TreeScope.TreeScope_Descendants);
+            var elementsXml = DomFactory.New(session.ApplicationRoot);
 
             // get
             return (StatusCodes.Status200OK, elementsXml);

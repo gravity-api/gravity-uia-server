@@ -1,5 +1,5 @@
-﻿using System.Collections;
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+
 using UIAutomationClient;
 
 namespace UiaDriverServer.Dto
