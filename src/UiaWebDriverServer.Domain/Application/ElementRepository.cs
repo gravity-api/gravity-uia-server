@@ -447,11 +447,6 @@ namespace UiaWebDriverServer.Domain.Application
             var conditions = new List<IUIAutomationCondition>();
             var segments = Regex.Match(pathSegment, @"(?<=\[).*(?=\])").Value.Split(" and ").Select(i => $"[{i}]");
 
-            if (segments.Count() > 1)
-            {
-                var a = "break here!";
-            }
-
             // build
             foreach (var segment in segments)
             {
