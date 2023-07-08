@@ -2,7 +2,6 @@
   "profiles": {
     "http": {
       "commandName": "Project",
-      "commandLineArgs": "--register",
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {

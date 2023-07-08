@@ -106,7 +106,7 @@ namespace UiaWebDriverServer.Domain.Application
             // delete
             try
             {
-                session.Application?.Kill(entireProcessTree: true);
+                session?.Application?.Kill(entireProcessTree: true);
             }
             catch (Exception e) when (e != null)
             {
