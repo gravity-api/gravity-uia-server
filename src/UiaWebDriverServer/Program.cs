@@ -89,6 +89,7 @@ builder.Services.AddSingleton<IDictionary<string, Session>>(new ConcurrentDictio
 // domain
 builder.Services.AddTransient<IElementRepository, ElementRepository>();
 builder.Services.AddTransient<ISessionRepository, SessionRepository>();
+builder.Services.AddTransient<IDocumentRepository, DocumentRepository>();
 builder.Services.AddTransient<IUiaDomain, UiaDomain>();
 #endregion
 

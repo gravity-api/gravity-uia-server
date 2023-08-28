@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -31,7 +29,7 @@ namespace UiaWebDriverServer.Domain.Extensions
             locationStrategy.Value = locationStrategy.Value.Replace("//root", string.Empty);
 
             // build
-            var dom = DomFactory.Create(session.ApplicationRoot, session.TreeScope);
+            var dom = DomFactory.New(session.ApplicationRoot);
             var domElement = dom.XPathSelectElement(locationStrategy.Value);
             var domRuntime = domElement?.Attribute("id").Value;
 
@@ -44,6 +42,28 @@ namespace UiaWebDriverServer.Domain.Extensions
 
             // get element
             return (containerElement.FindFirst(TreeScope.TreeScope_Descendants, c), domElement, domRuntime);
+        }
+
+        public static IEnumerable<IUIAutomationElement> FindElements(this IUIAutomationElement element, IUIAutomationCondition condition, TreeScope scope)
+        {
+            // setup
+            var elementsArray = element.FindAll(scope, condition);
+
+            // not found
+            if(elementsArray == null || elementsArray.Length == 0)
+            {
+                return Array.Empty<IUIAutomationElement>();
+            }
+
+            // build
+            var elements = new List<IUIAutomationElement>();
+            for (int i = 0; i < elementsArray.Length; i++)
+            {
+                elements.Add(elementsArray.GetElement(i));
+            }
+
+            // get
+            return elements;
         }
     }
 }

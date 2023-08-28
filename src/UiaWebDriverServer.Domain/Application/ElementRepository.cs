@@ -7,8 +7,10 @@ using Microsoft.AspNetCore.Http;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -50,6 +52,17 @@ namespace UiaWebDriverServer.Domain.Application
         #region *** Find Element ***
         public (int Status, Element Element) FindElement(string session, LocationStrategy locationStrategy)
         {
+            return FindElement(locationStrategy, session);
+        }
+
+        public (int Status, Element Element) FindElement(string session, string element, LocationStrategy locationStrategy)
+        {
+            throw new NotImplementedException();
+        }
+
+        // Linear Search
+        private (int Status, Element Element) FindElement(LocationStrategy locationStrategy, string session)
+        {
             // not found
             if (!_sessions.ContainsKey(session))
             {
@@ -66,6 +79,12 @@ namespace UiaWebDriverServer.Domain.Application
                 return (StatusCodes.Status404NotFound, default);
             }
 
+            // dom
+            if (locationStrategy.Value.Contains("/DOM/", StringComparison.OrdinalIgnoreCase))
+            {
+                return FindElement(s, locationStrategy);
+            }
+
             foreach (var segment in segments)
             {
                 var (statusCode, element) = FindElement(session: s, string.Empty, locationStrategy: new()
@@ -74,7 +93,7 @@ namespace UiaWebDriverServer.Domain.Application
                     Value = segment
                 });
 
-                if(statusCode == StatusCodes.Status200OK)
+                if (statusCode == StatusCodes.Status200OK)
                 {
                     return (statusCode, element);
                 }
@@ -84,9 +103,63 @@ namespace UiaWebDriverServer.Domain.Application
             return (StatusCodes.Status404NotFound, default);
         }
 
-        public (int Status, Element Element) FindElement(string session, string element, LocationStrategy locationStrategy)
+        // Binary Search
+        private (int Status, Element Element) FindElement(Session session, LocationStrategy locationStrategy)
         {
-            throw new NotImplementedException();
+            // setup
+            var (isRoot, hierarchy) = GetLocatorHierarchy(locationStrategy);
+
+            // bad request
+            if (!hierarchy.Any())
+            {
+                return (StatusCodes.Status400BadRequest, default);
+            }
+
+            // setup
+            var segments = hierarchy
+                .Where(i => !string.IsNullOrEmpty(i) && !i.Equals("dom", StringComparison.OrdinalIgnoreCase))
+                .Select(i => $"/{i}")
+                .ToArray();
+
+            var uiElementSegment = segments[0];
+            var elementSegment = string.Join(string.Empty, segments.Skip(1));
+
+            // TODO: allow first element to found in the dom
+            // find element
+            var automation = new CUIAutomation8();
+            var rootElement = isRoot ? automation.GetRootElement() : session.ApplicationRoot;
+            var (statusCode, element) = FindElement(new LocationStrategy
+            {
+                Using = "xpath",
+                Value = (isRoot ? $"/root{uiElementSegment}" : uiElementSegment)
+            }, session.SessionId);
+
+            // not found
+            if(statusCode == StatusCodes.Status404NotFound)
+            {
+                return (statusCode, element);
+            }
+
+            // only one segment
+            if (segments.Length == 1)
+            {
+                return (StatusCodes.Status200OK, element.UIAutomationElement.ConvertToElement());
+            }
+
+            // find
+            var (status, automationElement) = GetElementFromDom(element, elementSegment);
+
+            // not found
+            if(automationElement == default)
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            // add to session state
+            session.Elements[automationElement.Id] = automationElement;
+
+            // get
+            return (status, automationElement);
         }
 
         private static (int Status, Element Element) FindElement(Session session, string element, LocationStrategy locationStrategy)
@@ -114,53 +187,57 @@ namespace UiaWebDriverServer.Domain.Application
             return GetByProperty(session, locationStrategy);
         }
 
+        private static (int Status, Element Element) GetElementFromDom(Element rootElement, string xpath)
+        {
+            // find
+            try
+            {
+                var automation = new CUIAutomation8();
+                var dom = new DomFactory(rootElement.UIAutomationElement).New();
+                var idAttribute = dom.XPathSelectElement(xpath)?.Attribute("id")?.Value;
+                var id = JsonSerializer.Deserialize<int[]>(idAttribute);
+                var condition = automation.CreatePropertyCondition(UIA_PropertyIds.UIA_RuntimeIdPropertyId, id);
+                var treeScope = TreeScope.TreeScope_Descendants;
+
+                rootElement.UIAutomationElement = rootElement.UIAutomationElement.FindFirst(treeScope, condition);
+
+                var statusCode = rootElement.UIAutomationElement == null
+                    ? StatusCodes.Status404NotFound
+                    : StatusCodes.Status200OK;
+                rootElement = rootElement.UIAutomationElement == null
+                    ? default
+                    : rootElement.UIAutomationElement.ConvertToElement();
+
+                if (rootElement == default)
+                {
+                    return (StatusCodes.Status404NotFound, default);
+                }
+
+                return (statusCode, rootElement);
+            }
+            catch (Exception e) when (e != null)
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+        }
+
         private static (int Status, Element Element) GetByProperty(Session session, LocationStrategy locationStrategy)
         {
-            // constants
-            const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
-
-            // setup conditions
-            var values = Regex.Matches(locationStrategy.Value, @"(?<==').+?(?=')").Select(i => i.Value).ToArray();
-            var isRoot = locationStrategy.Value.StartsWith("/root", Compare);
-            var xpath = isRoot
-                ? locationStrategy.Value.Replace("/root", string.Empty, Compare)
-                : locationStrategy.Value;
-
-            // normalize tokens
-            var tokens = new Dictionary<string, string>();
-            for (int i = 0; i < values.Length; i++)
-            {
-                tokens[$"value_token_{i}"] = values[i];
-                xpath = xpath.Replace(values[i], $"value_token_{i}");
-            }
-            
             // setup
-            var hierarchy = GetHierarchyPattern()
-                .Split(xpath)
-                .Where(i => !string.IsNullOrEmpty(i))
-                .ToArray();
-
-            // restore tokens
-            for (int i = 0; i < hierarchy.Length; i++)
-            {
-                foreach (var token in tokens)
-                {
-                    hierarchy[i] = hierarchy[i].Replace(token.Key, token.Value);
-                }
-            }
+            var (isRoot, hierarchy) = GetLocatorHierarchy(locationStrategy);
 
             // bad request
-            if (hierarchy.Length == 0)
+            if (!hierarchy.Any())
             {
                 return (StatusCodes.Status400BadRequest, default);
             }
 
             // find element
             var rootElement = isRoot ? new CUIAutomation8().GetRootElement() : session.ApplicationRoot;
-            var automationElement = GetElementBySegment(new CUIAutomation8(), rootElement, hierarchy[0]);
+            var automationElement = GetElementBySegment(new CUIAutomation8(), rootElement, hierarchy.First());
 
             // not found
-            if(automationElement == default)
+            if (automationElement == default)
             {
                 return (StatusCodes.Status404NotFound, default);
             }
@@ -169,7 +246,7 @@ namespace UiaWebDriverServer.Domain.Application
             foreach (var pathSegment in hierarchy.Skip(1))
             {
                 automationElement = GetElementBySegment(new CUIAutomation8(), automationElement, pathSegment);
-                if(automationElement == default)
+                if (automationElement == default)
                 {
                     return (StatusCodes.Status404NotFound, default);
                 }
@@ -181,6 +258,61 @@ namespace UiaWebDriverServer.Domain.Application
 
             // get
             return (StatusCodes.Status200OK, element);
+        }
+
+        [SuppressMessage("GeneratedRegex", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Keep it simple.")]
+        private static (bool FromDesktop, IEnumerable<string> Hierarchy) GetLocatorHierarchy(LocationStrategy locationStrategy)
+        {
+            // constants
+            const RegexOptions RegexOptions = RegexOptions.IgnoreCase | RegexOptions.Singleline;
+
+            // setup conditions
+            var values = Regex.Matches(locationStrategy.Value, @"(?<==').+?(?=')").Select(i => i.Value).ToArray();
+            var fromDesktop = Regex.IsMatch(locationStrategy.Value, @"^(\(+)?\/(root|dom)", RegexOptions);
+            var xpath = fromDesktop
+                ? Regex.Replace(locationStrategy.Value, @"^(\(+)?\/(root|dom)", string.Empty, RegexOptions)
+                : locationStrategy.Value;
+
+            // normalize tokens
+            var tokens = new Dictionary<string, string>();
+            for (int i = 0; i < values.Length; i++)
+            {
+                tokens[$"value_token_{i}"] = values[i];
+                xpath = xpath.Replace(values[i], $"value_token_{i}");
+            }
+
+            // setup
+            var hierarchy = Regex
+                .Split(xpath, @"\/(?=\w+|\*)(?![^\[]*\])")
+                .Where(i => !string.IsNullOrEmpty(i))
+                .ToArray();
+
+            // normalize
+            for (int i = 0; i < hierarchy.Length; i++)
+            {
+                var segment = hierarchy[i];
+                if (!segment.Equals("/") && !segment.EndsWith("/"))
+                {
+                    continue;
+                }
+                hierarchy[i + 1] = $"/{hierarchy[i + 1]}";
+            }
+            hierarchy = hierarchy
+                .Where(i => !string.IsNullOrEmpty(i) && !i.Equals("/"))
+                .Select(i=>i.TrimEnd('/'))
+                .ToArray();
+
+            // restore tokens
+            for (int i = 0; i < hierarchy.Length; i++)
+            {
+                foreach (var token in tokens)
+                {
+                    hierarchy[i] = hierarchy[i].Replace(token.Key, token.Value);
+                }
+            }
+
+            // get
+            return (fromDesktop, hierarchy);
         }
 
         private static IUIAutomationElement GetElementBySegment(
@@ -197,7 +329,7 @@ namespace UiaWebDriverServer.Domain.Application
             var scope = isDescendants ? TreeScope.TreeScope_Descendants : TreeScope.TreeScope_Children;
             IUIAutomationCondition condition;
 
-            if(controlTypeCondition == default && propertyCondition != default)
+            if (controlTypeCondition == default && propertyCondition != default)
             {
                 condition = propertyCondition;
             }
@@ -315,11 +447,6 @@ namespace UiaWebDriverServer.Domain.Application
             var conditions = new List<IUIAutomationCondition>();
             var segments = Regex.Match(pathSegment, @"(?<=\[).*(?=\])").Value.Split(" and ").Select(i => $"[{i}]");
 
-            if (segments.Count() > 1)
-            {
-                var a = "break here!";
-            }
-
             // build
             foreach (var segment in segments)
             {
@@ -347,7 +474,7 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // not found
-            if(conditions.Count == 0)
+            if (conditions.Count == 0)
             {
                 return default;
             }
@@ -391,10 +518,10 @@ namespace UiaWebDriverServer.Domain.Application
             }
 
             // find attribute
-            var xml = DomFactory.Create(elementObject.UIAutomationElement, TreeScope.TreeScope_Children);
-            var isRoot = xml.Document.Root.Name.LocalName.Equals("root", StringComparison.OrdinalIgnoreCase);
+            var xml = DomFactory.New(elementObject.UIAutomationElement);
+            var isRoot = xml.Document.Root.Name.LocalName.Equals("Root", StringComparison.OrdinalIgnoreCase);
             var value = isRoot
-                ? XElement.Parse($"{xml.XPathSelectElement("/root/*")}")?.Attribute(attribute).Value
+                ? XElement.Parse($"{xml.XPathSelectElement("/Root/*")}")?.Attribute(attribute)?.Value
                 : XElement.Parse($"{xml}").Attribute(attribute)?.Value;
 
             // get

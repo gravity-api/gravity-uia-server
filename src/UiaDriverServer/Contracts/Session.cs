@@ -19,9 +19,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json.Serialization;
-using System.Threading;
 using System.Xml.Linq;
 
 using UiaDriverServer.Extensions;

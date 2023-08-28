@@ -3,14 +3,6 @@
  * 
  * RESSOURCES
  */
-using Microsoft.AspNetCore.Http;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using UiaWebDriverServer.Contracts;
 using UiaWebDriverServer.Domain.Application;
 
@@ -20,15 +12,19 @@ namespace UiaWebDriverServer.Domain
     {
         public UiaDomain(
             IElementRepository elementsRepository,
-            ISessionRepository sessionsRepository)
+            ISessionRepository sessionsRepository,
+            IDocumentRepository documentRepository)
         {
             SessionsRepository = sessionsRepository;
             ElementsRepostiroy = elementsRepository;
+            DocumentRepository = documentRepository;
         }
 
         public ISessionRepository SessionsRepository { get; }
 
         public IElementRepository ElementsRepostiroy { get; }
+
+        public IDocumentRepository DocumentRepository { get; }
 
         /// <summary>
         /// Gets a session by id.

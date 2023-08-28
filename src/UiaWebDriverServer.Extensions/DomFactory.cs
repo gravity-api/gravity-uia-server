@@ -33,90 +33,81 @@ namespace UiaWebDriverServer.Extensions
         /// <summary>
         /// generates a new DOM-factory instance to create a DOM based on automation-element
         /// </summary>
-        /// <param name="root">Root element to start building the DOM from.</param>
-        public DomFactory(IUIAutomationElement root)
-            :this(root, TreeScope.TreeScope_Children)
-        { }
-
-        /// <summary>
-        /// generates a new DOM-factory instance to create a DOM based on automation-element
-        /// </summary>
         /// <param name="rootElement">Root element to start building the DOM from.</param>
-        /// <param name="treeScope">The scope by which to search for elements.</param>
-        public DomFactory(IUIAutomationElement rootElement, TreeScope treeScope)
+        public DomFactory(IUIAutomationElement rootElement)
         {
             _rootElement = rootElement;
-            _treeScope = treeScope;
         }
 
         /// <summary>
         /// create virtual DOM for the current application
         /// </summary>
         /// <returns>virtual DOM</returns>
-        public XDocument Create()
-        {
-            return Create(_treeScope, _rootElement);
-        }
-
-        /// <summary>
-        /// create virtual DOM for the current application
-        /// </summary>
-        /// <returns>virtual DOM</returns>
-        public static XDocument Create(IUIAutomationElement element)
-        {
-            return Create(TreeScope.TreeScope_Children, element);
-        }
-
-        /// <summary>
-        /// create virtual DOM for the current application
-        /// </summary>
-        /// <returns>virtual DOM</returns>
-        public static XDocument Create(IUIAutomationElement element, TreeScope treeScope)
-        {
-            return Create(treeScope, element);
-        }
-
-        private static XDocument Create(TreeScope treeScope, IUIAutomationElement element)
+        public XDocument New()
         {
             // setup
-            var xml = CreateXml(element, treeScope);
-            var xmlBody = string.Join("\n", xml);
-
-            // build
-            var xdocument = $"<root>{xmlBody}</root>";
+            var automation = new CUIAutomation8();
+            var element = _rootElement ?? automation.GetRootElement();
 
             // get
-            return XDocument.Parse(xdocument);
+            return New(automation, element);
         }
 
-        // Utilities
-        private static IEnumerable<string> CreateXml(IUIAutomationElement element, TreeScope treeScope)
+        /// <summary>
+        /// create virtual DOM for the current application
+        /// </summary>
+        /// <returns>virtual DOM</returns>
+        public static XDocument New(IUIAutomationElement element)
         {
-            // load attributes dictionary
-            var attributes = GetElementAttributes(element);
-            var condition = new CUIAutomation8().CreateTrueCondition();
+            // setup
+            var automation = new CUIAutomation8();
+
+            // get
+            return New(automation, element);
+        }
+
+        private static XDocument New(CUIAutomation8 automation, IUIAutomationElement element)
+        {
+            // setup
+            var xmlData = RegisterNewDom(automation, element);
+            var xml = "<Root>" + string.Join("\n", xmlData) + "</Root>";
+
+            // get
+            try
+            {
+                return XDocument.Parse(xml);
+            }
+            catch (Exception e) when (e != null)
+            {
+                return XDocument.Parse($"<Root><Error>{e.GetBaseException().Message}</Error></Root>");
+            }
+        }
+
+        // Utilites
+        private static IEnumerable<string> RegisterNewDom(CUIAutomation8 automation, IUIAutomationElement element)
+        {
+            // setup
             var xml = new List<string>();
 
-            // get tagName
+            // setup: open tag
             var tagName = element.GetTagName();
+            var attributes = GetElementAttributes(element);
 
-            // add current element row
+            // apply open tag
             xml.Add($"<{tagName} {attributes}>");
 
-            // exit routine
-            var elements = element.FindAll(treeScope, condition);
-            if (elements.Length == 0)
+            // iterate
+            var condition = automation.CreateTrueCondition();
+            var treeWalker = automation.CreateTreeWalker(condition);
+            var childElement = treeWalker.GetFirstChildElement(element);
+            while (childElement != null)
             {
-                xml.Add($"</{tagName}>");
-                return xml;
+                var nodeXml = RegisterNewDom(automation, childElement);
+                xml.AddRange(nodeXml);
+                childElement = treeWalker.GetNextSiblingElement(childElement);
             }
 
-            // iterate
-            for (int i = 0; i < elements.Length; i++)
-            {
-                var nodes = CreateXml(elements.GetElement(i), treeScope);
-                xml.AddRange(nodes);
-            }
+            // setup: close tag
             xml.Add($"</{tagName}>");
 
             // get

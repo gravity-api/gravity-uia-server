@@ -3,8 +3,6 @@
  * 
  * RESSOURCES
  */
-using System.Collections.Generic;
-
 using UiaWebDriverServer.Contracts;
 using UiaWebDriverServer.Domain.Application;
 
@@ -15,6 +13,8 @@ namespace UiaWebDriverServer.Domain
         ISessionRepository SessionsRepository { get; }
 
         IElementRepository ElementsRepostiroy { get; }
+
+        IDocumentRepository DocumentRepository { get; }
 
         public Session GetSession(string id);
     }

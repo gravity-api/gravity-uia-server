@@ -1,8 +1,4 @@
-﻿using System;
-
-using UIAutomationClient;
-
-namespace UiaDriverServer.Domain
+﻿namespace UiaDriverServer.Domain
 {
     public class NativeInteractionDomain
     {

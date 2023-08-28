@@ -1,15 +1,7 @@
-﻿using System.Drawing;
-using System;
+﻿using System;
 using UIAutomationClient;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using System.Runtime.Serialization;
-using System.Diagnostics;
-using System.Linq;
-using System.Windows;
 using UiaWebDriverServer.Contracts;
-using System.IO;
-using System.Security;
 
 
 var automation = new CUIAutomation8();

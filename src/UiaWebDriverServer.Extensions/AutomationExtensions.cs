@@ -155,7 +155,7 @@ namespace UiaWebDriverServer.Extensions
                         .Where(f => f.FieldType == typeof(int))
                         .FirstOrDefault(f => (int)f.GetValue(null) == element.CurrentControlType)?.Name;
 
-                    return GetControlTypePattern().Match(controlType).Value.ToCamelCase();
+                    return GetControlTypePattern().Match(controlType).Value;
                 }
                 catch (COMException e) when (e != null)
                 {
@@ -215,30 +215,30 @@ namespace UiaWebDriverServer.Extensions
             // local
             static IDictionary<string, string> Get(IUIAutomationElement info) => new Dictionary<string, string>
             {
-                ["AcceleratorKey".ToCamelCase()] = info.CurrentAcceleratorKey.ParseForXml(),
-                ["AccessKey".ToCamelCase()] = info.CurrentAccessKey.ParseForXml(),
-                ["AriaProperties".ToCamelCase()] = info.CurrentAriaProperties.ParseForXml(),
-                ["AriaRole".ToCamelCase()] = info.CurrentAriaRole.ParseForXml(),
-                ["AutomationId".ToCamelCase()] = info.CurrentAutomationId.ParseForXml(),
-                ["Bottom".ToCamelCase()] = $"{info.CurrentBoundingRectangle.bottom}",
-                ["Left".ToCamelCase()] = $"{info.CurrentBoundingRectangle.left}",
-                ["Right".ToCamelCase()] = $"{info.CurrentBoundingRectangle.right}",
-                ["Top".ToCamelCase()] = $"{info.CurrentBoundingRectangle.top}",
-                ["ClassName".ToCamelCase()] = info.CurrentClassName.ParseForXml(),
-                ["FrameworkId".ToCamelCase()] = info.CurrentFrameworkId.ParseForXml(),
-                ["HelpText".ToCamelCase()] = info.CurrentHelpText.ParseForXml(),
-                ["IsContentElement".ToCamelCase()] = info.CurrentIsContentElement == 1 ? "true" : "false",
-                ["IsControlElement".ToCamelCase()] = info.CurrentIsControlElement == 1 ? "true" : "false",
-                ["IsEnabled".ToCamelCase()] = info.CurrentIsEnabled == 1 ? "true" : "false",
-                ["IsKeyboardFocusable".ToCamelCase()] = info.CurrentIsKeyboardFocusable == 1 ? "true" : "false",
-                ["IsPassword".ToCamelCase()] = info.CurrentIsPassword == 1 ? "true" : "false",
-                ["IsRequiredForForm".ToCamelCase()] = info.CurrentIsRequiredForForm == 1 ? "true" : "false",
-                ["ItemStatus".ToCamelCase()] = info.CurrentItemStatus.ParseForXml(),
-                ["ItemType".ToCamelCase()] = info.CurrentItemType.ParseForXml(),
-                ["Name".ToCamelCase()] = info.CurrentName.ParseForXml(),
-                ["NativeWindowHandle".ToCamelCase()] = $"{info.CurrentNativeWindowHandle}",
-                ["Orientation".ToCamelCase()] = $"{info.CurrentOrientation}",
-                ["ProcessId".ToCamelCase()] = $"{info.CurrentProcessId}"
+                ["AcceleratorKey"] = info.CurrentAcceleratorKey.ParseForXml(),
+                ["AccessKey"] = info.CurrentAccessKey.ParseForXml(),
+                ["AriaProperties"] = info.CurrentAriaProperties.ParseForXml(),
+                ["AriaRole"] = info.CurrentAriaRole.ParseForXml(),
+                ["AutomationId"] = info.CurrentAutomationId.ParseForXml(),
+                ["Bottom"] = $"{info.CurrentBoundingRectangle.bottom}",
+                ["Left"] = $"{info.CurrentBoundingRectangle.left}",
+                ["Right"] = $"{info.CurrentBoundingRectangle.right}",
+                ["Top"] = $"{info.CurrentBoundingRectangle.top}",
+                ["ClassName"] = info.CurrentClassName.ParseForXml(),
+                ["FrameworkId"] = info.CurrentFrameworkId.ParseForXml(),
+                ["HelpText"] = info.CurrentHelpText.ParseForXml(),
+                ["IsContentElement"] = info.CurrentIsContentElement == 1 ? "true" : "false",
+                ["IsControlElement"] = info.CurrentIsControlElement == 1 ? "true" : "false",
+                ["IsEnabled"] = info.CurrentIsEnabled == 1 ? "true" : "false",
+                ["IsKeyboardFocusable"] = info.CurrentIsKeyboardFocusable == 1 ? "true" : "false",
+                ["IsPassword"] = info.CurrentIsPassword == 1 ? "true" : "false",
+                ["IsRequiredForForm"] = info.CurrentIsRequiredForForm == 1 ? "true" : "false",
+                ["ItemStatus"] = info.CurrentItemStatus.ParseForXml(),
+                ["ItemType"] = info.CurrentItemType.ParseForXml(),
+                ["Name"] = info.CurrentName.ParseForXml(),
+                ["NativeWindowHandle"] = $"{info.CurrentNativeWindowHandle}",
+                ["Orientation"] = $"{info.CurrentOrientation}",
+                ["ProcessId"] = $"{info.CurrentProcessId}"
             };
 
             // setup
@@ -484,7 +484,7 @@ namespace UiaWebDriverServer.Extensions
 
             // setup
             Thread.Sleep(1000);
-            var dom = DomFactory.Create(session.ApplicationRoot, TreeScope.TreeScope_Descendants);
+            var dom = DomFactory.New(session.ApplicationRoot);
 
             // not created
             if (dom == null)
@@ -624,7 +624,8 @@ namespace UiaWebDriverServer.Extensions
         public static Element ConvertToElement(this IUIAutomationElement automationElement)
         {
             // setup
-            var id = string.IsNullOrEmpty(automationElement.CurrentAutomationId)
+            var automationId = automationElement.CurrentAutomationId;
+            var id = string.IsNullOrEmpty(automationId)
                 ? $"{Guid.NewGuid()}"
                 : automationElement.CurrentAutomationId;
             
@@ -672,7 +673,7 @@ namespace UiaWebDriverServer.Extensions
         public static string GetRuntime(this Session session, LocationStrategy locationStrategy)
         {
             // refresh children
-            session.Dom = DomFactory.Create(session.ApplicationRoot, TreeScope.TreeScope_Children);
+            session.Dom = DomFactory.New(session.ApplicationRoot);
 
             // find
             var domElement = session.Dom.XPathSelectElement(locationStrategy.Value);
