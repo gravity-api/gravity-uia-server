@@ -98,8 +98,8 @@ namespace UiaWebDriverServer.Controllers
             return Ok(new { Ready = !isFull, Message = message });
         }
 
-        // POST wd/hub/session/:id
-        // POST session/:id
+        // DELETE wd/hub/session/:id
+        // DELETE session/:id
         [Route("wd/hub/session/{id}")]
         [Route("session/{id}")]
         [HttpDelete]
@@ -115,8 +115,8 @@ namespace UiaWebDriverServer.Controllers
             };
         }
 
-        // POST wd/hub/session
-        // POST session
+        // DELETE wd/hub/session
+        // DELETE session
         [Route("wd/hub/session")]
         [Route("session")]
         [HttpDelete]
