@@ -119,6 +119,44 @@ namespace UiaWebDriverServer.Controllers
             return Ok();
         }
 
+        // POST wd/hub/user32/session/{s}/click
+        // POST user32/session/{s}/click
+        [Route("wd/hub/user32/session/{s}/click")]
+        [Route("user32/session/{s}/click")]
+        [HttpPost]
+        public IActionResult NativeClick(string s, IDictionary<string, object> data)
+        {
+            // load action information
+            var session = _domain.GetSession(s);
+            var x = ((JsonElement)data["x"]).GetInt32();
+            var y = ((JsonElement)data["y"]).GetInt32();
+
+            // invoke
+            session.Automation.NativeClick(x, y);
+
+            // get
+            return Ok();
+        }
+
+        // POST wd/hub/user32/session/{s}/dclick
+        // POST user32/session/{s}/dclick
+        [Route("wd/hub/user32/session/{s}/dclick")]
+        [Route("user32/session/{s}/dclick")]
+        [HttpPost]
+        public IActionResult NativeDoubleClick(string s, IDictionary<string, object> data)
+        {
+            // load action information
+            var session = _domain.GetSession(s);
+            var x = ((JsonElement)data["x"]).GetInt32();
+            var y = ((JsonElement)data["y"]).GetInt32();
+
+            // invoke
+            session.Automation.NativeClick(x, y, repeat: 2);
+
+            // get
+            return Ok();
+        }
+
         // POST wd/hub/user32/session/{s}/element/{e}/copy
         // POST user32/session/{s}/element/{e}/copy
         [Route("wd/hub/user32/session/{s}/element/{e}/copy")]

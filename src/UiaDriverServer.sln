@@ -23,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Extensio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Contracts", "UiaWebDriverServer.Contracts\UiaWebDriverServer.Contracts.csproj", "{1DBE6A11-389A-4493-B5CE-CCE910F196EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientApp", "ClientApp\ClientApp.csproj", "{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClientApp", "ClientApp\ClientApp.csproj", "{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

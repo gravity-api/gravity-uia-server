@@ -371,6 +371,24 @@ namespace UiaWebDriverServer.Extensions
             return InvokeElement(element);
         }
 
+        public static void NativeClick(this CUIAutomation8 automation, int x, int y)
+        {
+            SetPhysicalCursorPos(x, y);
+            InvokeNativeClick();
+        }
+
+        public static void NativeClick(this CUIAutomation8 automation, int x, int y, int repeat)
+        {
+            SetPhysicalCursorPos(x, y);
+            GetPhysicalCursorPos(out tagPOINT position);
+
+            for (int i = 0; i < repeat; i++)
+            {
+                mouse_event(MouseEventLeftDown, position.x, position.y, 0, 0);
+                mouse_event(MouseEventLeftUp, position.x, position.y, 0, 0);
+            }
+        }
+
         public static void NativeClick(this IUIAutomationElement element, double scaleRatio)
         {
             var point = InvokeGetClickablePoint(scaleRatio, element);
@@ -566,9 +584,22 @@ namespace UiaWebDriverServer.Extensions
         {
             // setup
             var map = GetScanCodeMap();
-            var inputs = new List<Input>();
+
+            // build: buttons
+            var isButton = map.Any(i => i.Value.Equals(input, StringComparison.OrdinalIgnoreCase));
+
+            if (isButton)
+            {
+                var wScan = map.First(i => i.Value.Equals(input, StringComparison.OrdinalIgnoreCase)).Key;
+                return new[]
+                {
+                    InvokeGetKeyboardInput(wScan, KeyEvent.KeyDown | KeyEvent.Scancode),
+                    InvokeGetKeyboardInput(wScan, KeyEvent.KeyUp | KeyEvent.Scancode)
+                };
+            }
 
             // build: inputs
+            var inputs = new List<Input>();
             foreach (var item in input)
             {
                 var (modified, modifier, keyCode) = GetModifiedInforamtion($"{item}");
@@ -599,7 +630,8 @@ namespace UiaWebDriverServer.Extensions
             info.AddRange(new (string Input, ushort Modifier, ushort ModifiedKeyCode)[]
             {
                 (Input: ":", Modifier: 0x2A, ModifiedKeyCode: 0x27),
-                (Input: "@", Modifier: 0x2A, ModifiedKeyCode: 0x03)
+                (Input: "@", Modifier: 0x2A, ModifiedKeyCode: 0x03),
+                (Input: "_", Modifier: 0x2A, ModifiedKeyCode: 0x0C)
             });
 
             // build
