@@ -6,6 +6,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+using System;
+using System.Linq;
+using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
 
@@ -72,7 +75,7 @@ namespace UiaWebDriverServer.Controllers
             {
                 Content = content,
                 ContentType = contentType,
-                StatusCode= statusCode
+                StatusCode = statusCode
             };
         }
 
@@ -95,8 +98,8 @@ namespace UiaWebDriverServer.Controllers
             return Ok(new { Ready = !isFull, Message = message });
         }
 
-        // POST wd/hub/session/:id
-        // POST session/:id
+        // DELETE wd/hub/session/:id
+        // DELETE session/:id
         [Route("wd/hub/session/{id}")]
         [Route("session/{id}")]
         [HttpDelete]
@@ -109,6 +112,34 @@ namespace UiaWebDriverServer.Controllers
             return new ContentResult
             {
                 StatusCode = response
+            };
+        }
+
+        // DELETE wd/hub/session
+        // DELETE session
+        [Route("wd/hub/session")]
+        [Route("session")]
+        [HttpDelete]
+        public IActionResult DeleteSession()
+        {
+            // get session
+            var sessions = _domain.SessionsRepository.Sessions.Keys;
+            foreach (var id in sessions)
+            {
+                try
+                {
+                    _domain.SessionsRepository.DeleteSession(id);
+                }
+                catch (Exception)
+                {
+                    // ignore exceptions
+                }
+            }
+
+            // get
+            return new ContentResult
+            {
+                StatusCode = 204
             };
         }
 
