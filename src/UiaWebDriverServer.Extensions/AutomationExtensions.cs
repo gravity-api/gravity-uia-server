@@ -689,11 +689,11 @@ namespace UiaWebDriverServer.Extensions
         /// <returns>Element information object.</returns>
         public static Element GetElement(this Session session, string id)
         {
-            if (!session.Elements.ContainsKey(id))
+            if (!session.Elements.TryGetValue(id, out Element value))
             {
                 return null;
             }
-            return session.Elements[id];
+            return value;
         }
 
         /// <summary>
