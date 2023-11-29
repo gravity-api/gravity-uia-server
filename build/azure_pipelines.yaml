@@ -1,96 +1,92 @@
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
-
-name: Gravity.UiaDriverServer.$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+name: Gravity.Uia.Server.$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
 
 trigger:
-  branches:
-    include:
-    - main
+- main
 
 pool:
-  name: Default
+  vmImage: 'windows-latest'
 
 variables:
-  group: github.com
+  solution: '**/*.sln'
+  buildPlatform: 'any cpu'
   buildConfiguration: 'Release'
 
-steps:
-- task: DotNetCoreCLI@2
-  displayName: Restore Dependencies
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
-    feedsToUse: 'select'
-    vstsFeed: '6ed1caf9-de4f-48e8-8276-201533d86a19'
-    verbosityRestore: 'Diagnostic'
+stages:
+  - stage: 'Build'
+    jobs:
+    - job: 'BuildAndPublish'
+      displayName: 'Build, Pack & Publish'
+      steps:
+      - task: NuGetToolInstaller@1
+        displayName: 'Install NuGet Tools'
 
-- task: DotNetCoreCLI@2
-  displayName: Build Projects
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
+      - task: NuGetCommand@2
+        displayName: 'Restore Packages'
+        inputs:
+          restoreSolution: '$(solution)'
 
-- task: DotNetCoreCLI@2
-  displayName: Execute Automation Tests
-  inputs:
-    command: 'test'
-    projects: '**/*[Tt]ests/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
-    testRunTitle: 'Automation Testing --- $(Build.BuildNumber)'
+      - task: VSBuild@1
+        displayName: 'Build Solution'
+        inputs:
+          solution: '$(solution)'
+          msbuildArgs: '/target:publish /p:Configuration=Release /p:DeployOnBuild=true /p:PublishDir=$(Build.BinariesDirectory)'
+          platform: '$(buildPlatform)'
+          configuration: '$(buildConfiguration)'
+          clean: true
 
-- task: DotNetCoreCLI@2
-  displayName: Publish Files to $(build.artifactstagingdirectory)/$(Build.BuildNumber)
-  inputs:
-    command: 'publish'
-    publishWebProjects: false
-    projects: '**/Rhino.Agent.csproj'
-    arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)/$(Build.BuildNumber)'
-    modifyOutputPath: false
+      - task: ArchiveFiles@2
+        displayName: 'Create Build Artifact'
+        inputs:
+          rootFolderOrFile: '$(Build.BinariesDirectory)/*.*'
+          archiveType: 'zip'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildNumber)-win-x64.zip'
+          replaceExistingArchive: true
 
-- task: PowerShell@2
-  displayName: 'Parse Build Version'
-  inputs:
-    targetType: 'inline'
-    script: |
-      # setup
-      [regex]$pattern = '(\d+.?)+'
-      $version        = $pattern.Matches('$(Build.BuildNumber)') | foreach-object {$_.Value}      
-      # set value
-      Write-Host "##vso[task.setvariable variable=buildVersion]$version"
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Build Artifact'
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'drop'
+          publishLocation: 'Container'
 
-- task: PowerShell@2
-  displayName: 'Set Version File'
-  inputs:
-    targetType: 'inline'
-    script: |
-      Set-Content -Path '$(build.artifactstagingdirectory)/$(Build.BuildNumber)/version.txt' -Value '$(buildVersion)'
-      # setup
-      [regex]$pattern = '(\d+.?)+'
-      $version        = $pattern.Matches('$(Build.BuildNumber)') | foreach-object {$_.Value}      
-      # set value
-      Write-Host "##vso[task.setvariable variable=buildVersion]$version"
+  - stage: 'PublishGit'
+    dependsOn: 'Build'
+    condition: succeeded()
+    jobs:
+    - job: 'CraeteRelease'
+      displayName: 'Create a GitHub Release & Tag'
+      steps:
+      - checkout: none
 
-- task: PublishBuildArtifacts@1
-  displayName: Publish Artifact to Container
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
-    publishLocation: 'Container'
+      - task: PowerShell@2
+        displayName: 'Parse Build Version for GitHub Tag'
+        inputs:
+          targetType: 'inline'
+          script: |
+            # setup
+            [regex]$pattern = '(\d+.?)+'
+            $version        = $pattern.Matches('$(Build.BuildNumber)') | foreach-object {$_.Value}
+            # set value
+            Write-Host "##vso[task.setvariable variable=buildVersion]$version"
 
-- task: GitHubRelease@1
-  displayName: 'Create GitHub Tag'
-  inputs:
-    gitHubConnection: 'github.com'
-    repositoryName: 'savanna-projects/rhino-agent'
-    action: 'create'
-    target: '$(Build.SourceVersion)'
-    tagSource: 'userSpecifiedTag'
-    tag: 'v$(buildVersion)'
-    title: 'Production v$(buildVersion)'
-    releaseNotesSource: 'inline'
-    assets: '$(build.artifactstagingdirectory)\$(Build.BuildNumber)\$(Build.BuildNumber).zip'
-    changeLogCompareToRelease: 'lastFullRelease'
-    changeLogType: 'commitBased'
-    isDraft: true
-    isPreRelease: true
+      - task: DownloadBuildArtifacts@1
+        inputs:
+          buildType: 'current'
+          downloadType: 'specific'
+          downloadPath: '$(System.ArtifactsDirectory)'
+          cleanDestinationFolder: true
+
+      - task: GitHubRelease@1
+        displayName: 'Create GitHub Tag'
+        inputs:
+          assets: $(Build.ArtifactStagingDirectory)/drop/*
+          gitHubConnection: 'github.com'
+          repositoryName: '$(Build.Repository.Name)'
+          action: 'create'
+          target: '$(Build.SourceVersion)'
+          tagSource: 'userSpecifiedTag'
+          tag: 'v$(buildVersion)'
+          title: 'Production v$(buildVersion)'
+          releaseNotesSource: 'inline'
+          changeLogCompareToRelease: 'lastFullRelease'
+          changeLogType: 'commitBased'

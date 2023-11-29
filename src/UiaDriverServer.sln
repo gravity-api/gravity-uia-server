@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaDriverServer", "UiaDriverServer\UiaDriverServer.csproj", "{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{E690D8DE-6E65-4610-9A77-E764B0CD42AB}"
 	ProjectSection(SolutionItems) = preProject
 		..\build\azure_pipelines.yaml = ..\build\azure_pipelines.yaml
@@ -23,18 +21,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Extensio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UiaWebDriverServer.Contracts", "UiaWebDriverServer.Contracts\UiaWebDriverServer.Contracts.csproj", "{1DBE6A11-389A-4493-B5CE-CCE910F196EE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClientApp", "ClientApp\ClientApp.csproj", "{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8A7C94A4-9D5E-452D-ABC3-3D9D4FF38AA4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BDC474E4-62AC-4326-A4ED-76E0AE0EC2E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -51,10 +43,6 @@ Global
 		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DBE6A11-389A-4493-B5CE-CCE910F196EE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3A6BC1ED-7C11-4830-92B4-2254888A8F2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
