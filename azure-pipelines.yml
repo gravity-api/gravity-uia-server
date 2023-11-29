@@ -1,74 +1,92 @@
+name: Gravity.Uia.Server.$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+
 trigger:
-- none
+- main
 
 pool:
-  vmImage: windows-latest
+  vmImage: 'windows-latest'
 
-parameters:
-- name: 'JenkinsServerEndpoint'
-  displayName: 'The Endpoint Address of Jenkins Server'
-  default: http://10.2.3.162
-
-- name: 'AutoRunMachines'
-  displayName: 'A Collection of AutoRun Automation Machines'
-  type: object
-  default: [
-    10.10.10.1,
-    10.10.10.2,
-    10.10.10.3
-  ]
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'any cpu'
+  buildConfiguration: 'Release'
 
 stages:
-  - stage: OpenRdpConnections
-    displayName: Open RDP Connections
+  - stage: 'Build'
     jobs:
-    - job: OpenConnections
-      displayName: Open Connections
+    - job: 'BuildAndPublish'
+      displayName: 'Build, Pack & Publish'
       steps:
-        - ${{ each machine in parameters.AutoRunMachines }}:
-          - task: PowerShell@2
-            displayName: Open RDP Connection to ${{ machine }}
-            inputs:
-              targetType: 'inline'
-              script: |
-                cmdkey /generic:TERMSRV/"${{ machine }}" /user:"TSTA.local\Autouser" /pass:"P@ssw0rd"
-                mstsc.exe "C:\AutoRun\Tools\RDP\RDP_Settings.rdp" /v "${{ machine }}"
-        
-        - task: maikvandergaag.maikvandergaag-trigger-pipeline.TriggerPipeline.TriggerPipeline@1
-          displayName: Invoke "nightly-win-agent-RDP" Pipeline
-          inputs:
-            serviceConnection: szTempPat
-            project: 'bbb94c5b-ff4d-4e90-b6f3-2904d4e3dd8e'
-            releaseDefinition: 'nightly-win-agent-RDP'
+      - task: NuGetToolInstaller@1
+        displayName: 'Install NuGet Tools'
 
-        - task: PowerShell@2
-          displayName: Wait for Test Invocation to Complete
-          inputs:
-            targetType: 'inline'
-            script: |
-              Start-Sleep -Seconds 21600
-    
-    - job: InvokeJenkinsJob
-      dependsOn: OpenConnections
-      displayName: Invoke Jenkins Job
+      - task: NuGetCommand@2
+        displayName: 'Restore Packages'
+        inputs:
+          restoreSolution: '$(solution)'
+
+      - task: VSBuild@1
+        displayName: 'Build Solution'
+        inputs:
+          solution: '$(solution)'
+          msbuildArgs: '/target:publish /p:Configuration=Release /p:DeployOnBuild=true /p:PublishDir=$(Build.BinariesDirectory)'
+          platform: '$(buildPlatform)'
+          configuration: '$(buildConfiguration)'
+          clean: true
+
+      - task: ArchiveFiles@2
+        displayName: 'Create Build Artifact'
+        inputs:
+          rootFolderOrFile: '$(Build.BinariesDirectory)/*.*'
+          archiveType: 'zip'
+          archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildNumber)-win-x64.zip'
+          replaceExistingArchive: true
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Build Artifact'
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'drop'
+          publishLocation: 'Container'
+
+  - stage: 'PublishGit'
+    dependsOn: 'Build'
+    condition: succeeded()
+    jobs:
+    - job: 'CraeteRelease'
+      displayName: 'Create a GitHub Release & Tag'
       steps:
+      - checkout: none
 
-        - task: PowerShell@2
-          displayName: Write Agent Version
-          inputs:
-            targetType: 'inline'
-            script: |
-              [string] $version = "${env:RELEASE_ARTIFACTS__ITX-WIN-BUNDLE-INSTALLER_BUILDNUMBER}"
-              Write-Host "##vso[task.setvariable variable=AgentBuildVersion]$version"
-              Write-Host "agentVersion=$($version)"
+      - task: PowerShell@2
+        displayName: 'Parse Build Version for GitHub Tag'
+        inputs:
+          targetType: 'inline'
+          script: |
+            # setup
+            [regex]$pattern = '(\d+.?)+'
+            $version        = $pattern.Matches('$(Build.BuildNumber)') | foreach-object {$_.Value}
+            # set value
+            Write-Host "##vso[task.setvariable variable=buildVersion]$version"
 
-        - task: JenkinsQueueJob@2
-          inputs:
-            serverEndpoint: ${{ parameters.JenkinsServerEndpoint }}
-            jobName: 'run-email-win-diag-result'
-            captureConsole: true
-            capturePipeline: true
-            isParameterizedJob: true
-            jobParameters: |
-              kind=win"&"diagnostic
-              version=$(AgentBuildVersion)
+      - task: DownloadBuildArtifacts@1
+        inputs:
+          buildType: 'current'
+          downloadType: 'specific'
+          downloadPath: '$(System.ArtifactsDirectory)'
+          cleanDestinationFolder: true
+
+      - task: GitHubRelease@1
+        displayName: 'Create GitHub Tag'
+        inputs:
+          assets: $(Build.ArtifactStagingDirectory)/drop/*
+          gitHubConnection: 'github.com'
+          repositoryName: '$(Build.Repository.Name)'
+          action: 'create'
+          target: '$(Build.SourceVersion)'
+          tagSource: 'userSpecifiedTag'
+          tag: 'v$(buildVersion)'
+          title: 'Production v$(buildVersion)'
+          releaseNotesSource: 'inline'
+          changeLogCompareToRelease: 'lastFullRelease'
+          changeLogType: 'commitBased'
