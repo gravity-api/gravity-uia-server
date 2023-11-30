@@ -4,6 +4,7 @@
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<UserSecretsId>e348a5e7-d327-4c9c-923e-1057338c96ca</UserSecretsId>
 		<DockerDefaultTargetOS>Windows</DockerDefaultTargetOS>
+		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
 	</PropertyGroup>
 
 	<ItemGroup>
