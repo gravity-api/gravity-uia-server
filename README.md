@@ -1,5 +1,3 @@
-Certainly! Here's the combined readme with the added download section:
-
 # Quick Start Guide for UIA Driver Server with Selenium Grid
 
 This guide provides a quick start on deploying a UIA Driver Server on Windows OS and registering it with a Selenium Grid.
