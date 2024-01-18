@@ -1026,6 +1026,8 @@ namespace UiaWebDriverServer.Extensions
 
         private static ClickablePoint InvokeGetClickablePoint(double scaleRatio, IUIAutomationElement element)
         {
+            scaleRatio = scaleRatio <= 0 ? 1 : scaleRatio;
+
             // range
             var hDelta = (element.CurrentBoundingRectangle.right - element.CurrentBoundingRectangle.left) / 2;
             var vDelta = (element.CurrentBoundingRectangle.bottom - element.CurrentBoundingRectangle.top) / 2;
