@@ -46,9 +46,10 @@ namespace UiaWebDriverServer.Domain.Application
             // setup
             var isAppCapability = capabilities.DesiredCapabilities.ContainsKey(UiaCapability.Application);
             var isApp = isAppCapability && !string.IsNullOrEmpty($"{capabilities.DesiredCapabilities[UiaCapability.Application]}");
+            var isDesktop = isApp && $"{capabilities.DesiredCapabilities[UiaCapability.Application]}".Equals("Desktop", StringComparison.OrdinalIgnoreCase);
 
             // create
-            var (statusCode, response, seesion) = !isApp
+            var (statusCode, response, seesion) = !isApp || isDesktop
                 ? CreateDesktopSession(capabilities.DesiredCapabilities, _logger)
                 : CreateApplicationSession(capabilities.DesiredCapabilities, _logger);
 
@@ -101,7 +102,7 @@ namespace UiaWebDriverServer.Domain.Application
 
             // setup
             var session = Sessions[id];
-            var name = session?.Application.StartInfo.FileName;
+            var name = session?.Application?.StartInfo.FileName;
 
             // delete
             try

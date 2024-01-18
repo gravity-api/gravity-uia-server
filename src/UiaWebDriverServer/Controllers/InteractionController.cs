@@ -29,7 +29,7 @@ namespace UiaWebDriverServer.Controllers
             // setup
             var (statusCode, _) = _domain.SessionsRepository.GetSession(id: s);
             var element = _domain.ElementsRepostiroy.GetElement(session: s, element: e);
-            var text = $"{data["text"]}";
+            var text = $"{data["text"]}"; // value
 
             // not found
             if(statusCode == StatusCodes.Status404NotFound)
