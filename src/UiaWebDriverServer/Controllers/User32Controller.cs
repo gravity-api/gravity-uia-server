@@ -119,6 +119,23 @@ namespace UiaWebDriverServer.Controllers
             return Ok();
         }
 
+        // POST wd/hub/user32/session/{s}/element/{e}/focus
+        // POST user32/session/{s}/element/{e}/focus
+        [Route("wd/hub/user32/session/{s}/element/{e}/focus")]
+        [Route("user32/session/{s}/element/{e}/focus")]
+        [HttpGet]
+        public IActionResult SetFocus(string s, string e)
+        {
+            // load action information
+            var element = _domain.ElementsRepostiroy.GetElement(s, e);
+
+            // invoke
+            element.UIAutomationElement.SetFocus();
+
+            // get
+            return Ok();
+        }
+
         // POST wd/hub/user32/session/{s}/click
         // POST user32/session/{s}/click
         [Route("wd/hub/user32/session/{s}/click")]

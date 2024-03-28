@@ -389,7 +389,7 @@ namespace UiaWebDriverServer.Domain.Application
         private static IUIAutomationCondition GetControlTypeCondition(CUIAutomation8 session, string pathSegment)
         {
             // constants
-            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_IgnoreCase;
+            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_None;
             const BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Static;
             const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
 
@@ -409,7 +409,7 @@ namespace UiaWebDriverServer.Domain.Application
 
             // setup
             var conditionFlag = typeSegment.StartsWith("partial", Compare)
-                ? ConditionFlags | PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
+                ? PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
                 : ConditionFlags;
             typeSegment = typeSegment.Replace("partial", string.Empty, Compare);
             var controlTypeId = GetControlTypeId(typeSegment);
@@ -428,7 +428,7 @@ namespace UiaWebDriverServer.Domain.Application
         private static IUIAutomationCondition GetPropertyCondition(CUIAutomation8 session, string pathSegment)
         {
             // constants
-            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_IgnoreCase;
+            const PropertyConditionFlags ConditionFlags = PropertyConditionFlags.PropertyConditionFlags_None;
             const BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Static;
             const StringComparison Compare = StringComparison.OrdinalIgnoreCase;
 
@@ -454,7 +454,7 @@ namespace UiaWebDriverServer.Domain.Application
 
                 // setup
                 var conditionFlag = typeSegment.StartsWith("partial", Compare)
-                    ? ConditionFlags | PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
+                    ? PropertyConditionFlags.PropertyConditionFlags_MatchSubstring
                     : ConditionFlags;
                 typeSegment = typeSegment.Replace("partial", string.Empty, Compare);
                 var valueSegment = GetPropertyValueSegmentPattern().Match(segment).Value;
