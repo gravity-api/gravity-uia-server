@@ -34,7 +34,7 @@ namespace UiaWebDriverServer.Controllers
         public IActionResult FindElement(string s, LocationStrategy locationStrategy)
         {
             // setup
-            var (statusCode, element) = _domain.ElementsRepostiroy.FindElement(session: s, locationStrategy);
+            var (statusCode, element) = _domain.ElementsRepository.FindElement(session: s, locationStrategy);
 
             // bad request
             if (statusCode == StatusCodes.Status400BadRequest)
@@ -61,7 +61,7 @@ namespace UiaWebDriverServer.Controllers
         public IActionResult GetElementText(string s, string e)
         {
             // setup
-            var (statusCode, text) = _domain.ElementsRepostiroy.GetElementText(session: s, element: e);
+            var (statusCode, text) = _domain.ElementsRepository.GetElementText(session: s, element: e);
             var contentBody = new { Value = text };
             var content = JsonSerializer.Serialize(contentBody, new JsonSerializerOptions
             {
@@ -86,7 +86,7 @@ namespace UiaWebDriverServer.Controllers
         {
             // setup
             var (statusCode, text) = _domain
-                .ElementsRepostiroy
+                .ElementsRepository
                 .GetElementAttribute(session: s, element: e, attribute: name);
             var contentBody = new { Value = text };
             var content = JsonSerializer.Serialize(contentBody, new JsonSerializerOptions

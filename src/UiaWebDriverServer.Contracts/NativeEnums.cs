@@ -49,6 +49,7 @@ namespace UiaWebDriverServer.Contracts
             Absolute = 0x8000,
         }
 
+        [Flags]
         public enum KeyEvent : uint
         {
             KeyDown = 0x0000,

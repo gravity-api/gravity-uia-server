@@ -191,6 +191,97 @@ namespace UiaWebDriverServer.Extensions
         }
 
         /// <summary>
+        /// Calculates the clickable point relative to an element based on alignment and offsets.
+        /// </summary>
+        /// <param name="element">The UI automation element.</param>
+        /// <param name="align">The alignment of the clickable point.</param>
+        /// <param name="topOffset">The vertical offset from the alignment point.</param>
+        /// <param name="leftOffset">The horizontal offset from the alignment point.</param>
+        /// <param name="scaleRatio">The scale ratio of the session.</param>
+        /// <returns>The calculated clickable point.</returns>
+        public static ClickablePoint GetClickablePoint(
+            this IUIAutomationElement element,
+            string align,
+            int topOffset,
+            int leftOffset,
+            double scaleRatio)
+        {
+            // Ensure scaleRatio is positive
+            scaleRatio = scaleRatio <= 0 ? 1 : scaleRatio;
+
+            switch (align.ToUpper())
+            {
+                // Calculate clickable point based on specified alignment
+                case "TOPLEFT":
+                    return new ClickablePoint
+                    {
+                        XPos = (int)(element.CurrentBoundingRectangle.left / scaleRatio) + leftOffset,
+                        YPos = (int)(element.CurrentBoundingRectangle.top / scaleRatio) + topOffset
+                    };
+                case "TOPCENTER":
+                    {
+                        var horizontalDelta = (element.CurrentBoundingRectangle.right - element.CurrentBoundingRectangle.left) / 2;
+                        return new ClickablePoint
+                        {
+                            XPos = (int)((element.CurrentBoundingRectangle.left + horizontalDelta) / scaleRatio) + leftOffset,
+                            YPos = (int)(element.CurrentBoundingRectangle.top / scaleRatio) + topOffset
+                        };
+                    }
+                case "TOPRIGHT":
+                    return new ClickablePoint
+                    {
+                        XPos = (int)(element.CurrentBoundingRectangle.right / scaleRatio) + leftOffset,
+                        YPos = (int)(element.CurrentBoundingRectangle.top / scaleRatio) + topOffset
+                    };
+
+                case "MIDDLELEFT":
+                    {
+                        var verticalDelta = (element.CurrentBoundingRectangle.bottom - element.CurrentBoundingRectangle.top) / 2;
+                        return new ClickablePoint
+                        {
+                            XPos = (int)(element.CurrentBoundingRectangle.left / scaleRatio) + leftOffset,
+                            YPos = (int)((element.CurrentBoundingRectangle.top + verticalDelta) / scaleRatio) + topOffset
+                        };
+                    }
+                case "MIDDLERIGHT":
+                    {
+                        var verticalDelta = (element.CurrentBoundingRectangle.bottom - element.CurrentBoundingRectangle.top) / 2;
+                        return new ClickablePoint
+                        {
+                            XPos = (int)(element.CurrentBoundingRectangle.right / scaleRatio) + leftOffset,
+                            YPos = (int)((element.CurrentBoundingRectangle.top + verticalDelta) / scaleRatio) + topOffset
+                        };
+                    }
+                case "BOTTOMLEFT":
+                    return new ClickablePoint
+                    {
+                        XPos = (int)(element.CurrentBoundingRectangle.left / scaleRatio) + leftOffset,
+                        YPos = (int)(element.CurrentBoundingRectangle.bottom / scaleRatio) + topOffset
+                    };
+
+                case "BOTTOMCENTER":
+                    {
+                        var horizontalDelta = (element.CurrentBoundingRectangle.right - element.CurrentBoundingRectangle.left) / 2;
+                        return new ClickablePoint
+                        {
+                            XPos = (int)((element.CurrentBoundingRectangle.left + horizontalDelta) / scaleRatio) + leftOffset,
+                            YPos = (int)(element.CurrentBoundingRectangle.bottom / scaleRatio) + topOffset
+                        };
+                    }
+                case "BOTTOMRIGHT":
+                    return new ClickablePoint
+                    {
+                        XPos = (int)(element.CurrentBoundingRectangle.right / scaleRatio) + leftOffset,
+                        YPos = (int)(element.CurrentBoundingRectangle.bottom / scaleRatio) + topOffset
+                    };
+
+                // Invoke alternative method if alignment is not recognized
+                default:
+                    return InvokeGetClickablePoint(scaleRatio, element);
+            }
+        }
+
+        /// <summary>
         /// Gets the <see cref="IUIAutomationElement"/> information as a collection of key/value.
         /// </summary>
         /// <param name="info"><see cref="IUIAutomationElement"/> information.</param>

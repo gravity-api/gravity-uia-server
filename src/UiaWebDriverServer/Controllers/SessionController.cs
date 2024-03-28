@@ -7,8 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 using System;
-using System.Linq;
-using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
 
@@ -20,7 +18,6 @@ namespace UiaWebDriverServer.Controllers
     [ApiController]
     public class SessionController : ControllerBase
     {
-        // members
         private readonly IUiaDomain _domain;
 
         public SessionController(IUiaDomain domain)
