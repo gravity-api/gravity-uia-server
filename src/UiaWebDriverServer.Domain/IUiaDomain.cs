@@ -12,7 +12,7 @@ namespace UiaWebDriverServer.Domain
     {
         ISessionRepository SessionsRepository { get; }
 
-        IElementRepository ElementsRepostiroy { get; }
+        IElementRepository ElementsRepository { get; }
 
         IDocumentRepository DocumentRepository { get; }
 

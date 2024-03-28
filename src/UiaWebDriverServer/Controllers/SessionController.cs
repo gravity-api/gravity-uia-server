@@ -16,9 +16,14 @@ using UiaWebDriverServer.Domain;
 namespace UiaWebDriverServer.Controllers
 {
     [ApiController]
-    public class SessionController(IUiaDomain domain) : ControllerBase
+    public class SessionController : ControllerBase
     {
-        private readonly IUiaDomain _domain = domain;
+        private readonly IUiaDomain _domain;
+
+        public SessionController(IUiaDomain domain)
+        {
+            _domain = domain;
+        }
 
         // POST wd/hub/session
         // POST session

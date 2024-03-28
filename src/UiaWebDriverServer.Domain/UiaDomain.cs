@@ -16,13 +16,13 @@ namespace UiaWebDriverServer.Domain
             IDocumentRepository documentRepository)
         {
             SessionsRepository = sessionsRepository;
-            ElementsRepostiroy = elementsRepository;
+            ElementsRepository = elementsRepository;
             DocumentRepository = documentRepository;
         }
 
         public ISessionRepository SessionsRepository { get; }
 
-        public IElementRepository ElementsRepostiroy { get; }
+        public IElementRepository ElementsRepository { get; }
 
         public IDocumentRepository DocumentRepository { get; }
 

@@ -28,7 +28,7 @@ namespace UiaWebDriverServer.Controllers
         {
             // setup
             var (statusCode, _) = _domain.SessionsRepository.GetSession(id: s);
-            var element = _domain.ElementsRepostiroy.GetElement(session: s, element: e);
+            var element = _domain.ElementsRepository.GetElement(session: s, element: e);
             var text = $"{data["text"]}"; // value
 
             // not found
@@ -66,7 +66,7 @@ namespace UiaWebDriverServer.Controllers
         {
             // setup
             var (statusCode, session) = _domain.SessionsRepository.GetSession(id: s);
-            var element = _domain.ElementsRepostiroy.GetElement(session: s, element: e);
+            var element = _domain.ElementsRepository.GetElement(session: s, element: e);
 
             // not found
             if (statusCode == StatusCodes.Status404NotFound)
