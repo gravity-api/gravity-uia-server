@@ -294,7 +294,7 @@ namespace UiaWebDriverServer.Controllers
             session.Automation.SetCursorPosition(point.XPos, point.YPos);
 
             // Return HTTP status code indicating success
-            return Ok();
+            return Ok(point);
         }
 
         // POST wd/hub/user32/session/{s}/click
