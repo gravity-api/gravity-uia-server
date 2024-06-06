@@ -73,13 +73,12 @@ namespace UiaWebDriverServer.Controllers
             {
                 return NotFound();
             }
-            if (element == null || element.UIAutomationElement == null)
+
+            if (element == null)
             {
                 return NotFound();
             }
-
-            // invoke
-            element.UIAutomationElement.Click(session.ScaleRatio);
+            element.Click(session.ScaleRatio);
 
             // get
             return Ok();
