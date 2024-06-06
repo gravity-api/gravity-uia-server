@@ -338,62 +338,6 @@ namespace UiaWebDriverServer.Extensions
                 ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftUp, position.x, position.y, 0, 0);
             }
         }
-
-        
-
-        /// <summary>
-        /// Invokes a pattern based MouseClick action on the element. If not possible to use
-        /// pattern, it will use native click.
-        /// </summary>
-        /// <param name="element">The element to click on.</param>
-        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
-        public static IUIAutomationElement Click(this IUIAutomationElement element)
-        {
-            return Click(scaleRatio: 1.0D, element);
-        }
-
-        /// <summary>
-        /// Invokes a pattern based MouseClick action on the element. If not possible to use
-        /// pattern, it will use native click.
-        /// </summary>
-        /// <param name="element">The element to click on.</param>
-        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
-        public static IUIAutomationElement Click(this IUIAutomationElement element, double scaleRatio)
-        {
-            return Click(scaleRatio, element);
-        }
-
-        private static IUIAutomationElement Click(double scaleRatio, IUIAutomationElement element)
-        {
-            // setup conditions
-            var isInvoke = element?.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) != null;
-            var isExpandCollapse = !isInvoke && element.GetCurrentPattern(UIA_PatternIds.UIA_ExpandCollapsePatternId) != null;
-            var isSelectable = !isInvoke && !isExpandCollapse && element.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId) != null;
-            var isCords = !isInvoke && !isExpandCollapse && !isSelectable;
-
-            // invoke
-            if (isInvoke)
-            {
-                InvokeElement(element);
-            }
-            else if (isExpandCollapse)
-            {
-                InvokeExpanCollapse(element);
-            }
-            else if (isSelectable)
-            {
-                SelectElement(element);
-            }
-            else if (isCords)
-            {
-                var point = InvokeGetClickablePoint(scaleRatio, element);
-                ExternalMethods.SetPhysicalCursorPos(point.XPos, point.YPos);
-                InvokeNativeClick();
-            }
-
-            // get
-            return element;
-        }
         #endregion
 
         #region *** Element: Select     ***
