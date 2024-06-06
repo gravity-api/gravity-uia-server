@@ -74,7 +74,7 @@ namespace UiaWebDriverServer.Domain.Application
             var segments = locationStrategy.Value.Split("|", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
             // bad request
-            if (segments == null || segments.Length == 0)
+            if (segments.Length == 0)
             {
                 return (StatusCodes.Status404NotFound, default);
             }
