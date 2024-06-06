@@ -3,9 +3,6 @@
  * 
  * RESSOURCES
  */
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -18,6 +15,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml.XPath;
 
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
 using UIAutomationClient;
 
 using UiaWebDriverServer.Contracts;
@@ -29,41 +29,12 @@ namespace UiaWebDriverServer.Extensions
 {
     public static partial class AutomationExtensions
     {
-        // constants
-        private const int MouseEventLeftDown = 0x02;
-        private const int MouseEventLeftUp = 0x04;
+        
 
         #region *** Expressions         ***
         [GeneratedRegex("(?<=UIA_).*(?=ControlTypeId)")]
         private static partial Regex GetControlTypePattern();
 
-        [GeneratedRegex("(?i)//cords\\[\\d+,\\d+]", RegexOptions.None, "en-US")]
-        private static partial Regex GetCordsPattern();
-
-        [GeneratedRegex("\\[\\d+,\\d+]")]
-        private static partial Regex GetCordsNumberPattern();
-        #endregion
-
-        #region *** Externals           ***
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetMessageExtraInfo();
-
-        [DllImport("gdi32.dll")]
-        private static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetPhysicalCursorPos(out tagPOINT lpPoint);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetPhysicalCursorPos(int x, int y);
-
-        // native calls: obsolete
-        [Obsolete("This function has been superseded. Use SendInput instead.")]
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
         #endregion
 
         #region *** Screen Size         ***
@@ -79,8 +50,8 @@ namespace UiaWebDriverServer.Extensions
             IntPtr desktop = graphics.GetHdc();
 
             // build
-            int physicalScreenHeight = GetDeviceCaps(desktop, (int)DeviceCap.Desktopvertres);
-            int physicalScreenWidth = GetDeviceCaps(desktop, (int)DeviceCap.Desktophorzres);
+            int physicalScreenHeight = ExternalMethods.GetDeviceCaps(desktop, (int)DeviceCap.Desktopvertres);
+            int physicalScreenWidth = ExternalMethods.GetDeviceCaps(desktop, (int)DeviceCap.Desktophorzres);
 
             // get
             return new Size(physicalScreenWidth, physicalScreenHeight);
@@ -167,119 +138,7 @@ namespace UiaWebDriverServer.Extensions
             return string.Empty;
         }
         #endregion
-
         #region *** Element: Attributes ***
-        /// <summary>
-        /// Try to get a mouse click-able point of the element.
-        /// </summary>
-        /// <param name="element">The Element to get click-able point for.</param>
-        /// <returns>A ClickablePoint object.</returns>
-        public static ClickablePoint GetClickablePoint(this IUIAutomationElement element)
-        {
-            return InvokeGetClickablePoint(scaleRatio: 1.0D, element);
-        }
-
-        /// <summary>
-        /// Try to get a mouse click-able point of the element.
-        /// </summary>
-        /// <param name="element">The Element to get click-able point for.</param>
-        /// <param name="scaleRatio">The screen scale ratio e.g., if the scale ratio is 250% this number will be 2.5, if 150% it will be 1.5, etc.</param>
-        /// <returns>A ClickablePoint object.</returns>
-        public static ClickablePoint GetClickablePoint(this IUIAutomationElement element, double scaleRatio)
-        {
-            return InvokeGetClickablePoint(scaleRatio, element);
-        }
-
-        /// <summary>
-        /// Calculates the clickable point relative to an element based on alignment and offsets.
-        /// </summary>
-        /// <param name="element">The UI automation element.</param>
-        /// <param name="align">The alignment of the clickable point.</param>
-        /// <param name="topOffset">The vertical offset from the alignment point.</param>
-        /// <param name="leftOffset">The horizontal offset from the alignment point.</param>
-        /// <param name="scaleRatio">The scale ratio of the session.</param>
-        /// <returns>The calculated clickable point.</returns>
-        public static ClickablePoint GetClickablePoint(
-            this IUIAutomationElement element,
-            string align,
-            int topOffset,
-            int leftOffset,
-            double scaleRatio)
-        {
-            // Ensure scaleRatio is positive
-            scaleRatio = scaleRatio <= 0 ? 1 : scaleRatio;
-
-            switch (align.ToUpper())
-            {
-                // Calculate clickable point based on specified alignment
-                case "TOPLEFT":
-                    return new ClickablePoint
-                    {
-                        XPos = (int)(element.CurrentBoundingRectangle.left / scaleRatio) + leftOffset,
-                        YPos = (int)(element.CurrentBoundingRectangle.top / scaleRatio) + topOffset
-                    };
-                case "TOPCENTER":
-                    {
-                        var horizontalDelta = (element.CurrentBoundingRectangle.right - element.CurrentBoundingRectangle.left) / 2;
-                        return new ClickablePoint
-                        {
-                            XPos = (int)((element.CurrentBoundingRectangle.left + horizontalDelta) / scaleRatio) + leftOffset,
-                            YPos = (int)(element.CurrentBoundingRectangle.top / scaleRatio) + topOffset
-                        };
-                    }
-                case "TOPRIGHT":
-                    return new ClickablePoint
-                    {
-                        XPos = (int)(element.CurrentBoundingRectangle.right / scaleRatio) + leftOffset,
-                        YPos = (int)(element.CurrentBoundingRectangle.top / scaleRatio) + topOffset
-                    };
-
-                case "MIDDLELEFT":
-                    {
-                        var verticalDelta = (element.CurrentBoundingRectangle.bottom - element.CurrentBoundingRectangle.top) / 2;
-                        return new ClickablePoint
-                        {
-                            XPos = (int)(element.CurrentBoundingRectangle.left / scaleRatio) + leftOffset,
-                            YPos = (int)((element.CurrentBoundingRectangle.top + verticalDelta) / scaleRatio) + topOffset
-                        };
-                    }
-                case "MIDDLERIGHT":
-                    {
-                        var verticalDelta = (element.CurrentBoundingRectangle.bottom - element.CurrentBoundingRectangle.top) / 2;
-                        return new ClickablePoint
-                        {
-                            XPos = (int)(element.CurrentBoundingRectangle.right / scaleRatio) + leftOffset,
-                            YPos = (int)((element.CurrentBoundingRectangle.top + verticalDelta) / scaleRatio) + topOffset
-                        };
-                    }
-                case "BOTTOMLEFT":
-                    return new ClickablePoint
-                    {
-                        XPos = (int)(element.CurrentBoundingRectangle.left / scaleRatio) + leftOffset,
-                        YPos = (int)(element.CurrentBoundingRectangle.bottom / scaleRatio) + topOffset
-                    };
-
-                case "BOTTOMCENTER":
-                    {
-                        var horizontalDelta = (element.CurrentBoundingRectangle.right - element.CurrentBoundingRectangle.left) / 2;
-                        return new ClickablePoint
-                        {
-                            XPos = (int)((element.CurrentBoundingRectangle.left + horizontalDelta) / scaleRatio) + leftOffset,
-                            YPos = (int)(element.CurrentBoundingRectangle.bottom / scaleRatio) + topOffset
-                        };
-                    }
-                case "BOTTOMRIGHT":
-                    return new ClickablePoint
-                    {
-                        XPos = (int)(element.CurrentBoundingRectangle.right / scaleRatio) + leftOffset,
-                        YPos = (int)(element.CurrentBoundingRectangle.bottom / scaleRatio) + topOffset
-                    };
-
-                // Invoke alternative method if alignment is not recognized
-                default:
-                    return InvokeGetClickablePoint(scaleRatio, element);
-            }
-        }
 
         /// <summary>
         /// Gets the <see cref="IUIAutomationElement"/> information as a collection of key/value.
@@ -464,28 +323,23 @@ namespace UiaWebDriverServer.Extensions
 
         public static void NativeClick(this CUIAutomation8 automation, int x, int y)
         {
-            SetPhysicalCursorPos(x, y);
+            ExternalMethods.SetPhysicalCursorPos(x, y);
             InvokeNativeClick();
         }
 
         public static void NativeClick(this CUIAutomation8 automation, int x, int y, int repeat)
         {
-            SetPhysicalCursorPos(x, y);
-            GetPhysicalCursorPos(out tagPOINT position);
+            ExternalMethods.SetPhysicalCursorPos(x, y);
+            ExternalMethods.GetPhysicalCursorPos(out tagPOINT position);
 
             for (int i = 0; i < repeat; i++)
             {
-                mouse_event(MouseEventLeftDown, position.x, position.y, 0, 0);
-                mouse_event(MouseEventLeftUp, position.x, position.y, 0, 0);
+                ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftDown, position.x, position.y, 0, 0);
+                ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftUp, position.x, position.y, 0, 0);
             }
         }
 
-        public static void NativeClick(this IUIAutomationElement element, double scaleRatio)
-        {
-            var point = InvokeGetClickablePoint(scaleRatio, element);
-            SetPhysicalCursorPos(point.XPos, point.YPos);
-            InvokeNativeClick();
-        }
+        
 
         /// <summary>
         /// Invokes a pattern based MouseClick action on the element. If not possible to use
@@ -533,7 +387,7 @@ namespace UiaWebDriverServer.Extensions
             else if (isCords)
             {
                 var point = InvokeGetClickablePoint(scaleRatio, element);
-                SetPhysicalCursorPos(point.XPos, point.YPos);
+                ExternalMethods.SetPhysicalCursorPos(point.XPos, point.YPos);
                 InvokeNativeClick();
             }
 
@@ -631,9 +485,8 @@ namespace UiaWebDriverServer.Extensions
             var modifierCode = GetKeyCode(modifier);
             var keyCode = GetKeyCode(key);
             var inputs = Modify(modifierCode, keyCode).ToArray();
-
             // invoke
-            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            ExternalMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
             Marshal.GetLastWin32Error();
         }
 
@@ -646,11 +499,11 @@ namespace UiaWebDriverServer.Extensions
         public static (uint NumberOfEvents, int ErrorCode) SendInput(this CUIAutomation8 _, params Input[] inputs)
         {
             // invoke
-            var numberOfevents = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
+            var numberOfEvents = ExternalMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
             var errorCode = Marshal.GetLastWin32Error();
 
             // get
-            return (numberOfevents, errorCode);
+            return (numberOfEvents, errorCode);
         }
 
         /// <summary>
@@ -662,15 +515,15 @@ namespace UiaWebDriverServer.Extensions
         /// <returns>Self reference.</returns>
         public static CUIAutomation8 SetCursorPosition(this CUIAutomation8 automation, int x, int y)
         {
-            SetPhysicalCursorPos(x, y);
+            ExternalMethods.SetPhysicalCursorPos(x, y);
             return automation;
         }
 
         /// <summary>
-        /// Gets a collection of KeyboradInput based on an input string.
+        /// Gets a collection of KeyboardInput based on an input string.
         /// </summary>
-        /// <param name="input">The intput string.</param>
-        /// <returns>A collection of KeyboradInput.</returns>
+        /// <param name="input">The input string.</param>
+        /// <returns>A collection of KeyboardInput.</returns>
         public static IEnumerable<Input> GetInputs(this string input)
         {
             // setup
@@ -822,27 +675,6 @@ namespace UiaWebDriverServer.Extensions
 
             // get element
             return containerElement.FindFirst(TreeScope.TreeScope_Descendants, c);
-        }
-
-        /// <summary>
-        /// Gets a flat (x, y) click-able point (//cords[x, y]) wrapped in an Element.
-        /// </summary>
-        /// <param name="locationStrategy">LocationStrategy object to get cords from.</param>
-        /// <returns>An Element object with a flat click-able point.</returns>
-        public static Element GetFlatPointElement(this LocationStrategy locationStrategy)
-        {
-            // setup conditions
-            var isCords = GetCordsPattern().IsMatch(locationStrategy.Value);
-
-            // not found
-            if (!isCords)
-            {
-                return null;
-            }
-
-            // load cords
-            var cords = JsonSerializer.Deserialize<int[]>(GetCordsNumberPattern().Match(locationStrategy.Value).Value);
-            return new Element { ClickablePoint = new ClickablePoint(xpos: cords[0], ypos: cords[1]) };
         }
 
         /// <summary>
@@ -1131,6 +963,7 @@ namespace UiaWebDriverServer.Extensions
             return new(xpos: x, ypos: y);
         }
 
+
         private static IUIAutomationElement SelectElement(this IUIAutomationElement element)
         {
             // get current pattern
@@ -1158,11 +991,11 @@ namespace UiaWebDriverServer.Extensions
         private static void InvokeNativeClick()
         {
             // get current mouse position
-            GetPhysicalCursorPos(out tagPOINT position);
+            ExternalMethods.GetPhysicalCursorPos(out tagPOINT position);
 
             // invoke click sequence
-            mouse_event(MouseEventLeftDown, position.x, position.y, 0, 0);
-            mouse_event(MouseEventLeftUp, position.x, position.y, 0, 0);
+            ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftDown, position.x, position.y, 0, 0);
+            ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftUp, position.x, position.y, 0, 0);
         }
 
         private static IDictionary<ushort, string> GetScanCodeMap() => new Dictionary<ushort, string>
@@ -1270,7 +1103,7 @@ namespace UiaWebDriverServer.Extensions
                     wVk = 0,
                     wScan = wScan,
                     dwFlags = (uint)(flags),
-                    dwExtraInfo = GetMessageExtraInfo()
+                    dwExtraInfo = ExternalMethods.GetMessageExtraInfo()
                 }
             }
         };

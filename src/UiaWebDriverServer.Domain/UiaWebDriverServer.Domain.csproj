@@ -19,6 +19,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\UiaWebDriverServer.Extensions\UiaWebDriverServer.Extensions.csproj" />
+	  <ProjectReference Include="..\UiaWebDriverServer.FindByOcr\UiaWebDriverServer.FindByOcr.csproj" />
 	</ItemGroup>
 
 </Project>
