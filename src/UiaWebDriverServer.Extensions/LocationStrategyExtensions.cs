@@ -28,7 +28,7 @@ namespace UiaWebDriverServer.Extensions
         /// <returns>An Element object with a flat click-able point.</returns>
         public static Element GetElementByText(this LocationStrategy locationStrategy)
         {
-            ExternalMethods.SetProcessDpiAwarenessContext(-4);
+            //ExternalMethods.SetProcessDpiAwarenessContext(-4);
             var textToFind = GetOcrTextValue(locationStrategy);
 
             // not found
@@ -47,12 +47,13 @@ namespace UiaWebDriverServer.Extensions
             {
                 return null;
             }
+            
             var location = new Location { Left = word.Region.Left, Right = word.Region.Right, Bottom = word.Region.Bottom, Top = word.Region.Top };
-            var x = word.Region.Left + (word.Region.Width / 2);
-            var y = word.Region.Top + (word.Region.Height / 2);
+            var point = location.GetMidCenterPoint(1.0D);
+
             var element = new Element
             {
-                ClickablePoint = new ClickablePoint(x, y),
+                ClickablePoint = point,
                 Location = location,
                 Node = new XText(textToFind),
                 Id = $"{Guid.NewGuid()}"
