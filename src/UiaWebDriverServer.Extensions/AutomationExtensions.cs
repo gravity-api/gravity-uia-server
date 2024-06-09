@@ -339,8 +339,6 @@ namespace UiaWebDriverServer.Extensions
             }
         }
 
-        
-
         /// <summary>
         /// Invokes a pattern based MouseClick action on the element. If not possible to use
         /// pattern, it will use native click.
@@ -363,36 +361,60 @@ namespace UiaWebDriverServer.Extensions
             return Click(scaleRatio, element);
         }
 
-        private static IUIAutomationElement Click(double scaleRatio, IUIAutomationElement element)
+        private static IUIAutomationElement Click(double scaleRatio, IUIAutomationElement uiElement)
         {
             // setup conditions
-            var isInvoke = element?.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId) != null;
-            var isExpandCollapse = !isInvoke && element.GetCurrentPattern(UIA_PatternIds.UIA_ExpandCollapsePatternId) != null;
-            var isSelectable = !isInvoke && !isExpandCollapse && element.GetCurrentPattern(UIA_PatternIds.UIA_SelectionItemPatternId) != null;
-            var isCords = !isInvoke && !isExpandCollapse && !isSelectable;
+            var pattern = GetElementPattern(uiElement);
 
-            // invoke
-            if (isInvoke)
+            // perform based on pattern type
+            switch (pattern)
             {
-                InvokeElement(element);
+                case IUIAutomationInvokePattern:
+                    uiElement.Invoke();
+                    break;
+
+                case IUIAutomationExpandCollapsePattern:
+                    uiElement.ExpandCollapse();
+                    break;
+
+                case IUIAutomationSelectionItemPattern:
+                    uiElement.Select();
+                    break;
+
+                default:
+                    var point = InvokeGetClickablePoint(scaleRatio, uiElement);
+                    ExternalMethods.SetPhysicalCursorPos(point.XPos, point.YPos);
+                    InvokeNativeClick();
+                    break;
             }
-            else if (isExpandCollapse)
-            {
-                InvokeExpanCollapse(element);
-            }
-            else if (isSelectable)
-            {
-                SelectElement(element);
-            }
-            else if (isCords)
-            {
-                var point = InvokeGetClickablePoint(scaleRatio, element);
-                ExternalMethods.SetPhysicalCursorPos(point.XPos, point.YPos);
-                InvokeNativeClick();
-            }
+
 
             // get
-            return element;
+            return uiElement;
+        }
+
+        private static object GetElementPattern(IUIAutomationElement uiElement)
+        {
+            if (uiElement is null)
+            {
+                return null;
+            }
+            var patterns = new[]
+            {
+                UIA_PatternIds.UIA_InvokePatternId,
+                UIA_PatternIds.UIA_ExpandCollapsePatternId,
+                UIA_PatternIds.UIA_SelectionItemPatternId
+            };
+            object patternObject = null;
+            foreach (var pattern in patterns)
+            {
+                patternObject = uiElement.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId);
+                if (patternObject != null)
+                {
+                    break;
+                }
+            }
+            return patternObject;
         }
         #endregion
 
