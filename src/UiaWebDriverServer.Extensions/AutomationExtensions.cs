@@ -338,6 +338,84 @@ namespace UiaWebDriverServer.Extensions
                 ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftUp, position.x, position.y, 0, 0);
             }
         }
+
+        /// <summary>
+        /// Invokes a pattern based MouseClick action on the element. If not possible to use
+        /// pattern, it will use native click.
+        /// </summary>
+        /// <param name="element">The element to click on.</param>
+        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
+        public static IUIAutomationElement Click(this IUIAutomationElement element)
+        {
+            return Click(scaleRatio: 1.0D, element);
+        }
+
+        /// <summary>
+        /// Invokes a pattern based MouseClick action on the element. If not possible to use
+        /// pattern, it will use native click.
+        /// </summary>
+        /// <param name="element">The element to click on.</param>
+        /// <remarks>This action will attempt to evaluate the center of the element and click on it.</remarks>
+        public static IUIAutomationElement Click(this IUIAutomationElement element, double scaleRatio)
+        {
+            return Click(scaleRatio, element);
+        }
+
+        private static IUIAutomationElement Click(double scaleRatio, IUIAutomationElement uiElement)
+        {
+            // setup conditions
+            var pattern = GetElementPattern(uiElement);
+
+            // perform based on pattern type
+            switch (pattern)
+            {
+                case IUIAutomationInvokePattern:
+                    uiElement.Invoke();
+                    break;
+
+                case IUIAutomationExpandCollapsePattern:
+                    uiElement.ExpandCollapse();
+                    break;
+
+                case IUIAutomationSelectionItemPattern:
+                    uiElement.Select();
+                    break;
+
+                default:
+                    var point = InvokeGetClickablePoint(scaleRatio, uiElement);
+                    ExternalMethods.SetPhysicalCursorPos(point.XPos, point.YPos);
+                    InvokeNativeClick();
+                    break;
+            }
+
+
+            // get
+            return uiElement;
+        }
+
+        private static object GetElementPattern(IUIAutomationElement uiElement)
+        {
+            if (uiElement is null)
+            {
+                return null;
+            }
+            var patterns = new[]
+            {
+                UIA_PatternIds.UIA_InvokePatternId,
+                UIA_PatternIds.UIA_ExpandCollapsePatternId,
+                UIA_PatternIds.UIA_SelectionItemPatternId
+            };
+            object patternObject = null;
+            foreach (var pattern in patterns)
+            {
+                patternObject = uiElement.GetCurrentPattern(UIA_PatternIds.UIA_InvokePatternId);
+                if (patternObject != null)
+                {
+                    break;
+                }
+            }
+            return patternObject;
+        }
         #endregion
 
         #region *** Element: Select     ***
