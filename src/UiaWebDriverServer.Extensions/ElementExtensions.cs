@@ -6,12 +6,28 @@ namespace UiaWebDriverServer.Extensions
 {
     public static class ElementExtensions
     {
+        public static Element Click(this Element element)
+        {
+            return element.Click(1.0D);
+        }
+
+        public static Element Click(this Element element, double scaleRatio)
+        {
+            if(element?.UIAutomationElement == null)
+            {
+                element.NativeClick(scaleRatio);
+            }
+            else
+            {
+                element.UIAutomationElement.Click(scaleRatio);
+            }
+            return element;
+        }
 
         public static void NativeClick(this Element element, double scaleRatio)
         {
             var point = InvokeGetClickablePoint(scaleRatio, element);
             ExternalMethods.SetPhysicalCursorPos(point.XPos, point.YPos);
-
 
             InvokeNativeClick();
         }
@@ -36,6 +52,27 @@ namespace UiaWebDriverServer.Extensions
         }
 
         /// <summary>
+        /// Try to get a mouse click-able point of the element.
+        /// </summary>
+        /// <param name="element">The Element to get click-able point for.</param>
+        /// <returns>A ClickablePoint object.</returns>
+        public static ClickablePoint GetClickablePoint(this Element element)
+        {
+            return InvokeGetClickablePoint(scaleRatio: 1.0D, element);
+        }
+
+        /// <summary>
+        /// Try to get a mouse click-able point of the element.
+        /// </summary>
+        /// <param name="element">The Element to get click-able point for.</param>
+        /// <param name="scaleRatio">The screen scale ratio e.g., if the scale ratio is 250% this number will be 2.5, if 150% it will be 1.5, etc.</param>
+        /// <returns>A ClickablePoint object.</returns>
+        public static ClickablePoint GetClickablePoint(this Element element, double scaleRatio)
+        {
+            return InvokeGetClickablePoint(scaleRatio, element);
+        }
+
+        /// <summary>
         /// Calculates the clickable point relative to an element based on alignment and offsets.
         /// </summary>
         /// <param name="element">The UI automation element.</param>
@@ -55,9 +92,10 @@ namespace UiaWebDriverServer.Extensions
             scaleRatio = scaleRatio <= 0 ? 1 : scaleRatio;
 
             var location = GetElementLocation(element);
+
+            // Calculate clickable point based on specified alignment
             switch (align.ToUpper())
             {
-                // Calculate clickable point based on specified alignment
                 case "TOPLEFT":
                     return new ClickablePoint
                     {
@@ -121,7 +159,9 @@ namespace UiaWebDriverServer.Extensions
                         YPos = (int)(location.Bottom / scaleRatio) + topOffset
                     };
 
-                // Invoke alternative method if alignment is MIDDLECENTER, or is not recognized
+                case "MIDDLECENTER":
+                    return location.GetMidCenterPoint(scaleRatio);
+
                 default:
                     return InvokeGetClickablePoint(scaleRatio, element);
             }
@@ -144,25 +184,6 @@ namespace UiaWebDriverServer.Extensions
             ExternalMethods.mouse_event(ExternalMethods.MouseEventLeftUp, position.x, position.y, 0, 0);
         }
         
-        /// <summary>
-        /// Try to get a mouse click-able point of the element.
-        /// </summary>
-        /// <param name="element">The Element to get click-able point for.</param>
-        /// <returns>A ClickablePoint object.</returns>
-        public static ClickablePoint GetClickablePoint(this Element element)
-        {
-            return InvokeGetClickablePoint(scaleRatio: 1.0D, element);
-        }
-
-        /// <summary>
-        /// Try to get a mouse click-able point of the element.
-        /// </summary>
-        /// <param name="element">The Element to get click-able point for.</param>
-        /// <param name="scaleRatio">The screen scale ratio e.g., if the scale ratio is 250% this number will be 2.5, if 150% it will be 1.5, etc.</param>
-        /// <returns>A ClickablePoint object.</returns>
-        public static ClickablePoint GetClickablePoint(this Element element, double scaleRatio)
-        {
-            return InvokeGetClickablePoint(scaleRatio, element);
-        }
+        
     }
 }
