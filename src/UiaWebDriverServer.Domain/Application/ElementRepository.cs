@@ -74,7 +74,7 @@ namespace UiaWebDriverServer.Domain.Application
             var segments = locationStrategy.Value.Split("|", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
             // bad request
-            if (segments == null || segments.Length == 0)
+            if (segments.Length == 0)
             {
                 return (StatusCodes.Status404NotFound, default);
             }
@@ -182,6 +182,7 @@ namespace UiaWebDriverServer.Domain.Application
 
                     // get by path
                     return GetByProperty(session, locationStrategy);
+
                 case LocationStrategy.CssSelector:
                     return GetByText(session, locationStrategy);
 
@@ -372,7 +373,7 @@ namespace UiaWebDriverServer.Domain.Application
         private static (int Status, Element Element) GetByCords(Session session, LocationStrategy locationStrategy)
         {
             // find
-            var element = UiaWebDriverServer.Extensions.LocationStrategyExtensions.GetFlatPointElement(locationStrategy);
+            var element = locationStrategy.GetFlatPointElement();
 
             // not found
             if (element == null)
