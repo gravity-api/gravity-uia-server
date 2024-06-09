@@ -3,14 +3,17 @@
  * 
  * RESSOURCES
  */
-using Microsoft.AspNetCore.Http;
-
 using System;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text.Json;
 using System.Threading.Tasks;
+
+using Microsoft.AspNetCore.Http;
 
 namespace UiaWebDriverServer.Extensions
 {
@@ -132,6 +135,21 @@ namespace UiaWebDriverServer.Extensions
 
             // get
             return securePassword;
+        }
+
+        public static Bitmap CaptureScreenshot()
+        {
+            ExternalMethods.DevMode devMode = default;
+            devMode.dmSize = (short)Marshal.SizeOf(devMode);
+            ExternalMethods.EnumDisplaySettings(null, -1, ref devMode);
+            var bitmap = new Bitmap(devMode.dmPelsWidth,
+                                       devMode.dmPelsHeight,
+                                       PixelFormat.Format32bppArgb);
+
+            var gfxScreenshot = Graphics.FromImage(bitmap);
+            gfxScreenshot.CopyFromScreen(devMode.dmPositionX, devMode.dmPositionY, 0, 0, bitmap.Size);
+
+            return bitmap;
         }
 
         // Utilities

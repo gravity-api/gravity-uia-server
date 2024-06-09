@@ -3,8 +3,6 @@
  * 
  * RESSOURCES
  */
-using Microsoft.AspNetCore.Http;
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -14,6 +12,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Xml.XPath;
+
+using Microsoft.AspNetCore.Http;
 
 using UIAutomationClient;
 
@@ -74,7 +74,7 @@ namespace UiaWebDriverServer.Domain.Application
             var segments = locationStrategy.Value.Split("|", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
             // bad request
-            if (segments == null || segments.Length == 0)
+            if (segments.Length == 0)
             {
                 return (StatusCodes.Status404NotFound, default);
             }
@@ -89,7 +89,7 @@ namespace UiaWebDriverServer.Domain.Application
             {
                 var (statusCode, element) = FindElement(session: s, string.Empty, locationStrategy: new()
                 {
-                    Using = "xpath",
+                    Using = locationStrategy.Using,
                     Value = segment
                 });
 
@@ -164,27 +164,32 @@ namespace UiaWebDriverServer.Domain.Application
 
         private static (int Status, Element Element) FindElement(Session session, string element, LocationStrategy locationStrategy)
         {
-            // not implemented
-            if (locationStrategy.Using != LocationStrategy.Xpath)
-            {
-                return (StatusCodes.Status501NotImplemented, default);
-            }
-
             // not found
             if (session == null)
             {
                 return (StatusCodes.Status404NotFound, default);
             }
 
-            // get by Cords
-            var elementByCords = GetByCords(session, locationStrategy);
-            if (elementByCords.Status == StatusCodes.Status200OK)
+            switch (locationStrategy.Using)
             {
-                return elementByCords;
+                case LocationStrategy.Xpath:
+                    // get by Cords
+                    var elementByCords = GetByCords(session, locationStrategy);
+                    if (elementByCords.Status == StatusCodes.Status200OK)
+                    {
+                        return elementByCords;
+                    }
+
+                    // get by path
+                    return GetByProperty(session, locationStrategy);
+
+                case LocationStrategy.CssSelector:
+                    return GetByText(session, locationStrategy);
+
+                default:
+                    return (StatusCodes.Status501NotImplemented, default);
             }
 
-            // get by path
-            return GetByProperty(session, locationStrategy);
         }
 
         private static (int Status, Element Element) GetElementFromDom(Element rootElement, string xpath)
@@ -379,6 +384,27 @@ namespace UiaWebDriverServer.Domain.Application
             // setup
             var id = $"{Guid.NewGuid()}";
 
+            // update
+            session.Elements[id] = element;
+
+            // get
+            return (StatusCodes.Status200OK, element);
+        }
+
+        private static (int Status, Element Element) GetByText(Session session, LocationStrategy locationStrategy)
+        {
+            // find
+            var element = locationStrategy.GetElementByText();
+
+            // not found
+            if (element == null)
+            {
+                return (StatusCodes.Status404NotFound, default);
+            }
+
+            // setup
+            var id = element.Id;
+            
             // update
             session.Elements[id] = element;
 
