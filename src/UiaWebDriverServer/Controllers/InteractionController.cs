@@ -73,6 +73,7 @@ namespace UiaWebDriverServer.Controllers
             {
                 return NotFound();
             }
+
             if (element == null)
             {
                 return NotFound();
