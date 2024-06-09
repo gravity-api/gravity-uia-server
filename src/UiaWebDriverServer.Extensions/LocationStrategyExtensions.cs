@@ -28,7 +28,6 @@ namespace UiaWebDriverServer.Extensions
         /// <returns>An Element object with a flat click-able point.</returns>
         public static Element GetElementByText(this LocationStrategy locationStrategy)
         {
-            //ExternalMethods.SetProcessDpiAwarenessContext(-4);
             var textToFind = GetOcrTextValue(locationStrategy);
 
             // not found

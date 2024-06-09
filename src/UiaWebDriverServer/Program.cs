@@ -233,5 +233,8 @@ static object GetNodeConfiguration(int port, int hubPort, string host, string br
 }
 #endregion
 
+//DPI Awareness Context doc: https://learn.microsoft.com/en-us/windows/win32/hidpi/dpi-awareness-context
+ExternalMethods.SetProcessDpiAwarenessContext(-4);
+
 // invoke
 app.Run();

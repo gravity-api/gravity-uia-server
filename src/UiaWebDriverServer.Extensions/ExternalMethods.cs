@@ -11,14 +11,14 @@ using static UiaWebDriverServer.Contracts.NativeStructs;
  */
 namespace UiaWebDriverServer.Extensions
 {
-    internal static class ExternalMethods
+    public static class ExternalMethods
     {
         // constants
         internal const int MouseEventLeftDown = 0x02;
         internal const int MouseEventLeftUp = 0x04;
 
         [DllImport("user32.dll")]
-        internal static extern bool SetProcessDpiAwarenessContext(int value);
+        public static extern bool SetProcessDpiAwarenessContext(int value);
 
         [DllImport("user32.dll")]
         internal static extern bool EnumDisplaySettings(string? deviceName, int modeNum, ref DevMode devMode);
