@@ -70,7 +70,7 @@ namespace UiaWebDriverServer.Controllers
             var element = _domain.ElementsRepository.GetElement(s, e);
 
             // Perform a native click on the UI automation element with the session's scale ratio
-            element.UIAutomationElement.NativeClick(session.ScaleRatio);
+            element.NativeClick(session.ScaleRatio);
 
             // Return HTTP status code indicating success
             return Ok();
@@ -288,7 +288,7 @@ namespace UiaWebDriverServer.Controllers
             var scaleRatio = session.ScaleRatio;
 
             // Get the clickable point on the element with the specified alignment and offsets
-            var point = element.UIAutomationElement.GetClickablePoint(align, topOffset, leftOffset, scaleRatio);
+            var point = element.GetClickablePoint(align, topOffset, leftOffset, scaleRatio);
 
             // Set the cursor position to the calculated point
             session.Automation.SetCursorPosition(point.XPos, point.YPos);
